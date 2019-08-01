@@ -1,3 +1,5 @@
+import csv
+
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtCore import Qt, QFileInfo, QDir, QUrl, QThread, QTime
@@ -12,7 +14,9 @@ class App(QMainWindow):
         super(App, self).__init__(parent)
         self.totalDolphins = 0
         self.totalSurfers = 0
-        self.videosPath = []
+        self.importedCSV = {}
+        self.statistics = []
+        self.importedVideos = {}
         self.initGUI()
         self.menuBar()
 
@@ -174,14 +178,18 @@ class App(QMainWindow):
         for i, item in enumerate(data):
             model.setItem(currentRow , i, QTableWidgetItem(item))
 
-    def addFilesToExplorer(self, files, fileType, scaler, extensionTag):
+    def addFilesToExplorer(self, files, fileType, scaler, extensionTag, isVideo=True):
         for i in range(len(files)):
             if files[i]:
                 info = QFileInfo(files[i])
-                self.videosPath.append(QUrl.fromLocalFile(files[i]))
-                size = str(info.size()/scaler)+extensionTag
-                last_modified = info.lastModified().toString()[4:10]
-                self.addItemToTable(self.explorerView, [info.baseName(), size, fileType, last_modified])
+                if info.baseName() in self.importedVideos or info.baseName() in self.importedCSV:
+                    QMessageBox.critical(self, "Error", "File already exist", buttons=QMessageBox.Ok)
+                else:
+                    if isVideo: self.importedVideos[info.baseName()] = QUrl.fromLocalFile(files[i])
+                    else: self.readCSV(info.filePath(), info.baseName())
+                    size = str(info.size()/scaler)+extensionTag
+                    last_modified = info.lastModified().toString()[4:10]
+                    self.addItemToTable(self.explorerView, [info.baseName(), size, fileType, last_modified])
 
     def openFile(self, fileType):
         options = QFileDialog.DontUseNativeDialog
@@ -189,10 +197,15 @@ class App(QMainWindow):
         return files
 
     def loadData(self):
-        self.addFilesToExplorer(self.openFile('mp4'), 'Video', 1000000, 'MB')
+        self.addFilesToExplorer(self.openFile('mp4'), 'Video', 1000000, 'MB', isVideo=True)
 
     def importCSV(self):
-        self.addFilesToExplorer(self.openFile('csv'), 'csv', 1000, 'KB')
+        self.addFilesToExplorer(self.openFile('csv'), 'csv', 1000, 'KB', isVideo=False)
+
+    def readCSV(self, path, baseName):
+        with open(path, 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            self.importedCSV[baseName] = list(reader)
 
     def setMedia(self, path):
         content = QMediaContent(path)
@@ -200,16 +213,22 @@ class App(QMainWindow):
         self.trainedVideo.setMedia(content)
 
     def processData(self):
-        if self.selectedVideo(): 
-            path = self.selectedVideo()
-            self.setMedia(path)
-            print("train in {} algorithm".format(self.getDLM()))
+        path, isVideo = self.selectedData()
+        if isVideo: self.setMedia(path)
+        print("train in {} algorithm".format(self.getDLM()))
 
     def saveVideo(self):
         print("video will be saved")
 
     def exportCSV(self):
         print("csv file will be exported")
+        if not self.statistics:
+            QMessageBox.critical(self, "Error", "Process the data first", buttons=QMessageBox.Ok)
+        else :
+            with open("statistics.csv", 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                for i in range(len(self.statistics)):
+                    writer.writerow(self.statistics[i])
 
     def setupVideoWidget(self, width=600, height=400):
         videoWidget = QVideoWidget()
@@ -239,10 +258,14 @@ class App(QMainWindow):
         self.video.play()
         self.trainedVideo.play()
 
-    def selectedVideo(self):
+    def selectedData(self):
         try:
-            index = self.explorerView.selectionModel().selectedRows()
-            return self.videosPath[index[0].row()]
+            index = self.explorerView.selectionModel().currentIndex().row()
+            item_type = self.explorerView.item(index, 2).text()
+            item_name = self.explorerView.item(index, 0).text()
+            print(item_type)
+            if item_type == "Video" or item_type == "Img" : return self.importedVideos[item_name], True
+            else: return self.importedCSV[item_name], False
         except IndexError:
             QMessageBox.critical(self, "Error", "Select a file from explorer", buttons=QMessageBox.Ok)
 
