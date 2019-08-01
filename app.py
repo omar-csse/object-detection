@@ -1,6 +1,6 @@
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtCore import Qt, QFileInfo, QDir, QUrl, QThread
+from PyQt5.QtCore import Qt, QFileInfo, QDir, QUrl, QThread, QTime
 from PyQt5.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QFileDialog
 from PyQt5.QtWidgets import QHBoxLayout, QGridLayout, QComboBox, QAction, QSlider
 from PyQt5.QtWidgets import QMessageBox, QAbstractItemView, QTableWidgetItem, QTableWidget, QTableView
@@ -88,11 +88,13 @@ class App(QMainWindow):
         # pause video btn
         self.pauseVideoBtn = QPushButton('Pause', self)
         self.pauseVideoBtn.clicked.connect(self.pauseVideo)
-        # video slider
+        # video slider and duration
+        self.durationLabel = QLabel("00:00", self)
         self.videoSlider = QSlider(Qt.Horizontal)
         self.videoBtnsWidgetLayout.addWidget(self.playVideoBtn)
         self.videoBtnsWidgetLayout.addWidget(self.pauseVideoBtn)
         self.videoBtnsWidgetLayout.addWidget(self.videoSlider)
+        self.videoBtnsWidgetLayout.addWidget(self.durationLabel)
 
         mainLayout = QGridLayout()
         mainLayout.addWidget(self.buttonsWidget1, 0, 0)
@@ -227,6 +229,10 @@ class App(QMainWindow):
         self.videoSlider.setValue(position)
 
     def durationChanged(self, duration):
+        seconds = (duration/1000) % 60
+        minutes = (duration/60000) % 60
+        hours = (duration/3600000) % 24
+        self.durationLabel.setText(QTime(hours, minutes,seconds).toString())
         self.videoSlider.setRange(0, duration)
 
     def playVideo(self):
