@@ -18,9 +18,10 @@ class App(QMainWindow):
         self.statistics = []
         self.importedVideos = {}
         self.initGUI()
-        self.menuBar()
+        self.menu()
 
     def initGUI(self):
+        self.statusBar().showMessage('Status: Ready')
         self.setWindowTitle("Object Detection App")
 
         mainWidget = QWidget(self)
@@ -30,6 +31,7 @@ class App(QMainWindow):
         self.buttonsWidget1Layout = QHBoxLayout(self.buttonsWidget1)
         # Load data btn
         self.loadDataBtn = QPushButton('Load Data', self)
+        self.loadDataBtn.setShortcut("Ctrl+O")
         self.loadDataBtn.clicked.connect(self.loadData)
         # import csv btn
         self.importCSVBtn = QPushButton('Import CSV', self)
@@ -67,9 +69,11 @@ class App(QMainWindow):
         self.buttonsWidget2Layout = QHBoxLayout(self.buttonsWidget2)
         # Load data btn
         self.saveVideoBtn = QPushButton('Save Video', self)
+        self.saveVideoBtn.setShortcut("Ctrl+S")
         self.saveVideoBtn.clicked.connect(self.saveVideo)
         # import csv btn
         self.exportCSVBtn = QPushButton('Export CSV', self)
+        self.exportCSVBtn.setShortcut("Ctrl+E")
         self.exportCSVBtn.clicked.connect(self.exportCSV)
         self.buttonsWidget2Layout.addWidget(self.saveVideoBtn)
         self.buttonsWidget2Layout.addWidget(self.exportCSVBtn)
@@ -88,9 +92,11 @@ class App(QMainWindow):
         self.videoBtnsWidgetLayout = QHBoxLayout(self.videoBtnsWidget)
         # playe video btn
         self.playVideoBtn = QPushButton('Play', self)
+        self.playVideoBtn.setShortcut("1")
         self.playVideoBtn.clicked.connect(self.playVideo)
         # pause video btn
         self.pauseVideoBtn = QPushButton('Pause', self)
+        self.pauseVideoBtn.setShortcut("2")
         self.pauseVideoBtn.clicked.connect(self.pauseVideo)
         # video slider and duration
         self.durationLabel = QLabel("00:00", self)
@@ -132,16 +138,20 @@ class App(QMainWindow):
 
     def menu(self):
         menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
         # File menu
         file_menu = menubar.addMenu(' &App')
         version_action = QAction(' &Version', self)
         quit_action = QAction(' &Quit', self)
-        file_menu.addAction(quit_action)
+        quit_action.setShortcut("Q")
         file_menu.addAction(version_action)
+        file_menu.addAction(quit_action)
         # Help menu
         help_menu = menubar.addMenu(' &Help')
         about_action = QAction(' &About ', self)
+        about_action.setShortcut("Ctrl+A")
         team_action = QAction(' &The team', self)
+        team_action.setShortcut("Ctrl+T")
         help_menu.addAction(about_action)
         help_menu.addAction(team_action)
 
@@ -190,6 +200,8 @@ class App(QMainWindow):
                     size = str(info.size()/scaler)+extensionTag
                     last_modified = info.lastModified().toString()[4:10]
                     self.addItemToTable(self.explorerView, [info.baseName(), size, fileType, last_modified])
+                self.statusBar().showMessage('Status: Ready')
+                    
 
     def openFile(self, fileType):
         options = QFileDialog.DontUseNativeDialog
@@ -197,9 +209,11 @@ class App(QMainWindow):
         return files
 
     def loadData(self):
+        self.statusBar().showMessage('Status: Loading Video/Image')
         self.addFilesToExplorer(self.openFile('mp4'), 'Video', 1000000, 'MB', isVideo=True)
 
     def importCSV(self):
+        self.statusBar().showMessage('Status: Importing CSV File')
         self.addFilesToExplorer(self.openFile('csv'), 'csv', 1000, 'KB', isVideo=False)
 
     def readCSV(self, path, baseName):
@@ -213,12 +227,17 @@ class App(QMainWindow):
         self.trainedVideo.setMedia(content)
 
     def processData(self):
-        path, isVideo = self.selectedData()
-        if isVideo: self.setMedia(path)
-        print("train in {} algorithm".format(self.getDLM()))
+        try:
+            path, isVideo = self.selectedData()
+            if isVideo: self.setMedia(path)
+            print("train in {} algorithm".format(self.getDLM()))
+            self.statusBar().showMessage('Status: Processing data in {}'.format(self.getDLM()))
+        except (IndexError, AttributeError, TypeError):
+            QMessageBox.critical(self, "Error", "Select a file from explorer", buttons=QMessageBox.Ok)
 
     def saveVideo(self):
         print("video will be saved")
+        self.statusBar().showMessage('Status: Video saved')
 
     def exportCSV(self):
         print("csv file will be exported")
@@ -229,6 +248,7 @@ class App(QMainWindow):
                 writer = csv.writer(csvfile)
                 for i in range(len(self.statistics)):
                     writer.writerow(self.statistics[i])
+                    self.statusBar().showMessage('Status: statistics exported')
 
     def setupVideoWidget(self, width=600, height=400):
         videoWidget = QVideoWidget()
@@ -259,15 +279,12 @@ class App(QMainWindow):
         self.trainedVideo.play()
 
     def selectedData(self):
-        try:
-            index = self.explorerView.selectionModel().currentIndex().row()
-            item_type = self.explorerView.item(index, 2).text()
-            item_name = self.explorerView.item(index, 0).text()
-            print(item_type)
-            if item_type == "Video" or item_type == "Img" : return self.importedVideos[item_name], True
-            else: return self.importedCSV[item_name], False
-        except IndexError:
-            QMessageBox.critical(self, "Error", "Select a file from explorer", buttons=QMessageBox.Ok)
+        index = self.explorerView.selectionModel().currentIndex().row()
+        item_type = self.explorerView.item(index, 2).text()
+        item_name = self.explorerView.item(index, 0).text()
+        print(item_type)
+        if item_type == "Video" or item_type == "Img" : return self.importedVideos[item_name], True
+        else: return self.importedCSV[item_name], False
 
     def pauseVideo(self):
         self.video.pause()
