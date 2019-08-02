@@ -251,6 +251,11 @@ class App(QMainWindow):
         self.trainedVideo.setMedia(content)
         self.playVideoBtn.setEnabled(True)
 
+    def setupVideoWidget(width=600, height=400):
+        videoWidget = QVideoWidget()
+        videoWidget.setMinimumWidth(width)
+        return videoWidget
+
     def processData(self):
         try:
             path, isVideo = self.selectedData()
@@ -357,9 +362,3 @@ class App(QMainWindow):
         elif event.key() == Qt.Key_S:
             self.stopVideo()
             self.resetSlider()
-
-
-def setupVideoWidget(width=600, height=400):
-    videoWidget = QVideoWidget()
-    videoWidget.setMinimumWidth(width)
-    return videoWidget
