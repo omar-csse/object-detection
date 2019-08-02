@@ -1,11 +1,13 @@
 import csv
+from operator import add, sub
 
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtCore import Qt, QFileInfo, QDir, QUrl, QThread, QTime, pyqtSignal
+from PyQt5.QtCore import Qt, QFileInfo, QDir, QUrl, QThread, QTime
 from PyQt5.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QFileDialog, QLineEdit
-from PyQt5.QtWidgets import QHBoxLayout, QGridLayout, QComboBox, QAction, QStyle
+from PyQt5.QtWidgets import QHBoxLayout, QGridLayout, QComboBox, QAction, QStyle, QSlider
 from PyQt5.QtWidgets import QMessageBox, QAbstractItemView, QTableWidgetItem, QTableWidget, QTableView
+from PyQt5.QtGui import QKeySequence
 
 from gui.slider import Slider
 from gui.button import Button
@@ -18,6 +20,7 @@ class App(QMainWindow):
         self.totalSurfers = 0
         self.importedCSV = {}
         self.statistics = []
+        self.isPlaying = False
         self.importedVideos = {}
         self.initGUI()
         self.menu()
@@ -86,38 +89,44 @@ class App(QMainWindow):
         self.spaceLabel = QLabel("                       ", self)
         self.inputLabel = QLabel("Input Video/Image", self)
         self.playerLabel = QLabel("Player", self)
-
+        
         # Video
         self.videoWidget = self.setupVideoWidget(width=400, height=350)
         self.trainedVideoWidget = self.setupVideoWidget(width=400, height=350)
         self.video = self.setupVideo(self.videoWidget)
+        self.currentVideoState = self.video.state()
         self.trainedVideo = self.setupVideo(self.trainedVideoWidget)
 
         self.video.positionChanged.connect(self.positionChanged)
         self.video.positionChanged.connect(self.handleLabel)
         self.video.durationChanged.connect(self.durationChanged)
-        self.video.stateChanged.connect(self.mediaStateChanged)
+        self.video.stateChanged.connect(self.sePlayBtntIcon)
 
         self.videoBtnsWidget = QWidget()
         self.videoBtnsWidgetLayout = QHBoxLayout(self.videoBtnsWidget)
         # playe video btn
         self.playVideoBtn = Button()
-        self.playVideoBtn.setFixedWidth(50)
-        self.playVideoBtn.setEnabled(False)
         self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.playVideoBtn.pressed.connect(lambda: self.playVideo(QMediaPlayer.PlayingState))
+        self.playVideoBtn.setEnabled(False)
+        self.playVideoBtn.pressed.connect(self.playVideo)
+        # Stop video btn
+        self.stopVideoBtn = Button()
+        self.stopVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.stopVideoBtn.released.connect(self.resetSlider)
+        self.stopVideoBtn.pressed.connect(self.stopVideo)
 
         self.durationLabel = QLabel('00:00:00')
-
         self.videoSlider = Slider()
         self.videoSlider.setOrientation(Qt.Horizontal)
         self.videoSlider.setMinimumWidth(250)
         self.videoSlider.setTickInterval(1)
         self.videoSlider.pressed.connect(self.pauseVideo)
-        self.videoSlider.released.connect(lambda: self.playVideo(QMediaPlayer.PlayingState))
+        self.videoSlider.released.connect(self.sliderChanged)
         self.videoSlider.sliderMoved.connect(self.setPosition)
         self.videoSlider.sliderMoved.connect(self.handleLabel)
+
         self.videoBtnsWidgetLayout.addWidget(self.playVideoBtn)
+        self.videoBtnsWidgetLayout.addWidget(self.stopVideoBtn)
         self.videoBtnsWidgetLayout.addWidget(self.videoSlider)
         self.videoBtnsWidgetLayout.addWidget(self.durationLabel)
 
@@ -276,7 +285,7 @@ class App(QMainWindow):
         return videoWidget
 
     def setupVideo(self, videoWidget):
-        video = QMediaPlayer()
+        video = QMediaPlayer(None, QMediaPlayer.StreamPlayback)
         video.setVideoOutput(videoWidget)
         video.setNotifyInterval(1)
         return video
@@ -294,6 +303,9 @@ class App(QMainWindow):
         self.time = mtime.addMSecs(self.video.position())
         self.durationLabel.setText(self.time.toString())
 
+    def resetSlider(self):
+        self.videoSlider.setValue(0)
+
     def durationChanged(self, duration):
         seconds = (duration/1000) % 60
         minutes = (duration/60000) % 60
@@ -301,27 +313,31 @@ class App(QMainWindow):
         self.durationLabel.setText(QTime(hours, minutes,seconds).toString())
         self.videoSlider.setRange(0, duration)
 
-    def playVideo(self, state):
-        if self.video.state() == state:
-            self.video.pause()
-            self.trainedVideo.pause()
-        else:
-            self.video.play()
-            self.trainedVideo.play()
-
-    def sliderChange(self, state):
+    def playVideo(self):
         if self.video.state() == QMediaPlayer.PlayingState:
             self.video.pause()
             self.trainedVideo.pause()
         else:
             self.video.play()
             self.trainedVideo.play()
-    
-    def mediaStateChanged(self, state):
-        if state == QMediaPlayer.PlayingState:
+
+    def stopVideo(self):
+        self.video.stop()
+        self.trainedVideo.stop()
+
+    def sliderChanged(self):
+        if self.currentVideoState == QMediaPlayer.PausedState:
             self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+            self.video.pause()
+            self.trainedVideo.pause()
         else:
             self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+            self.video.play()
+            self.trainedVideo.play()
+
+    def changeVideoFrame(self, sign):
+        self.trainedVideo.setPosition(sign(self.trainedVideo.position(), 100*60))
+        self.video.setPosition(sign(self.video.position(), 100*60))
 
     def selectedData(self):
         index = self.explorerView.selectionModel().currentIndex().row()
@@ -332,20 +348,28 @@ class App(QMainWindow):
         else: return self.importedCSV[item_name], False
 
     def pauseVideo(self):
+        self.currentVideoState = self.video.state()
         self.video.pause()
         self.trainedVideo.pause()
 
+    def sePlayBtntIcon(self, state):
+        if state == QMediaPlayer.PlayingState:
+            self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        else:
+            self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+
     def getDLM(self):
         return "Index: {} - Algorithm: {}".format(self.dlmOptions.currentIndex(), self.dlmOptions.currentText())
-    
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Right:
-            self.playVideo(not QMediaPlayer.PlayingState)
-            self.trainedVideo.setPosition(self.trainedVideo.position() + 100*60)
-            self.video.setPosition(self.video.position() + 100*60)
+            self.changeVideoFrame(add)
         elif event.key() == Qt.Key_Left:
-            self.playVideo(not QMediaPlayer.PlayingState)
-            self.trainedVideo.setPosition(self.trainedVideo.position() - 100*60)
-            self.video.setPosition(self.video.position() - 100*60)
+            self.changeVideoFrame(sub)
+
+    def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Space:
-            self.playVideo(QMediaPlayer.PlayingState)
+            self.playVideo()
+        elif event.key() == Qt.Key_S:
+            self.stopVideo()
+            self.resetSlider()
