@@ -3,11 +3,10 @@ from operator import add, sub
 
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtCore import Qt, QFileInfo, QDir, QUrl, QThread, QTime
-from PyQt5.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QFileDialog, QLineEdit
-from PyQt5.QtWidgets import QHBoxLayout, QGridLayout, QComboBox, QAction, QStyle, QSlider
+from PyQt5.QtCore import Qt, QFileInfo, QDir, QUrl, QTime
+from PyQt5.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QFileDialog
+from PyQt5.QtWidgets import QHBoxLayout, QGridLayout, QComboBox, QAction
 from PyQt5.QtWidgets import QMessageBox, QAbstractItemView, QTableWidgetItem, QTableWidget, QTableView
-from PyQt5.QtGui import QKeySequence
 
 from gui.slider import Slider
 from gui.button import Button
@@ -91,8 +90,8 @@ class App(QMainWindow):
         self.playerLabel = QLabel("Player", self)
         
         # Video
-        self.videoWidget = self.setupVideoWidget(width=400, height=350)
-        self.trainedVideoWidget = self.setupVideoWidget(width=400, height=350)
+        self.videoWidget = setupVideoWidget(width=400, height=350)
+        self.trainedVideoWidget = setupVideoWidget(width=400, height=350)
         self.video = self.setupVideo(self.videoWidget)
         self.currentVideoState = self.video.state()
         self.trainedVideo = self.setupVideo(self.trainedVideoWidget)
@@ -204,7 +203,8 @@ class App(QMainWindow):
         if minHeight: tableWidget.setMinimumHeight(minHeight)
         return tableWidget
 
-    def addItemToTable(self, model, data):
+    @staticmethod
+    def addItemToTable(model, data):
         currentRow = model.rowCount()
         model.insertRow(currentRow)
         for i, item in enumerate(data):
@@ -276,12 +276,7 @@ class App(QMainWindow):
                     self.statusBar().showMessage('Status: statistics exported')
 
     @staticmethod
-    def setupVideoWidget(width=600, height=400):
-        videoWidget = QVideoWidget()
-        videoWidget.setMinimumWidth(width)
-        return videoWidget
-
-    def setupVideo(self, videoWidget):
+    def setupVideo(videoWidget):
         video = QMediaPlayer(None, QMediaPlayer.StreamPlayback)
         video.setVideoOutput(videoWidget)
         video.setNotifyInterval(1)
@@ -362,3 +357,9 @@ class App(QMainWindow):
         elif event.key() == Qt.Key_S:
             self.stopVideo()
             self.resetSlider()
+
+
+def setupVideoWidget(width=600, height=400):
+    videoWidget = QVideoWidget()
+    videoWidget.setMinimumWidth(width)
+    return videoWidget
