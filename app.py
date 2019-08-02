@@ -90,8 +90,8 @@ class App(QMainWindow):
         self.playerLabel = QLabel("Player", self)
         
         # Video
-        self.videoWidget = setupVideoWidget(width=400, height=350)
-        self.trainedVideoWidget = setupVideoWidget(width=400, height=350)
+        self.videoWidget = self.setupVideoWidget(width=400, height=350)
+        self.trainedVideoWidget = self.setupVideoWidget(width=400, height=350)
         self.video = self.setupVideo(self.videoWidget)
         self.currentVideoState = self.video.state()
         self.trainedVideo = self.setupVideo(self.trainedVideoWidget)
