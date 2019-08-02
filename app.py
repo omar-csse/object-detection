@@ -100,18 +100,15 @@ class App(QMainWindow):
         self.video.positionChanged.connect(self.positionChanged)
         self.video.positionChanged.connect(self.handleLabel)
         self.video.durationChanged.connect(self.durationChanged)
-        self.video.stateChanged.connect(self.sePlayBtntIcon)
 
         self.videoBtnsWidget = QWidget()
         self.videoBtnsWidgetLayout = QHBoxLayout(self.videoBtnsWidget)
         # playe video btn
-        self.playVideoBtn = Button()
-        self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.playVideoBtn = Button("Play/Pause")
         self.playVideoBtn.setEnabled(False)
         self.playVideoBtn.pressed.connect(self.playVideo)
         # Stop video btn
-        self.stopVideoBtn = Button()
-        self.stopVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.stopVideoBtn = Button("Stop")
         self.stopVideoBtn.released.connect(self.resetSlider)
         self.stopVideoBtn.pressed.connect(self.stopVideo)
 
@@ -327,11 +324,9 @@ class App(QMainWindow):
 
     def sliderChanged(self):
         if self.currentVideoState == QMediaPlayer.PausedState:
-            self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.video.pause()
             self.trainedVideo.pause()
         else:
-            self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
             self.video.play()
             self.trainedVideo.play()
 
@@ -351,12 +346,6 @@ class App(QMainWindow):
         self.currentVideoState = self.video.state()
         self.video.pause()
         self.trainedVideo.pause()
-
-    def sePlayBtntIcon(self, state):
-        if state == QMediaPlayer.PlayingState:
-            self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
-        else:
-            self.playVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
 
     def getDLM(self):
         return "Index: {} - Algorithm: {}".format(self.dlmOptions.currentIndex(), self.dlmOptions.currentText())
