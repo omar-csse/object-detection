@@ -251,6 +251,7 @@ class App(QMainWindow):
         self.trainedVideo.setMedia(content)
         self.playVideoBtn.setEnabled(True)
 
+    @staticmethod
     def setupVideoWidget(width=600, height=400):
         videoWidget = QVideoWidget()
         videoWidget.setMinimumWidth(width)
