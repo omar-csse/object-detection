@@ -25,6 +25,7 @@ class App(QMainWindow):
         self.isPlaying = False
         self.importedVideos = {}
         self.framesPath = os.path.dirname(os.path.realpath(__file__)) + '/frames'
+        self.captureThreadCreated = False
         self.initGUI()
         self.menu()
 
@@ -372,5 +373,11 @@ class App(QMainWindow):
             self.resetSlider()
         elif event.key() == Qt.Key_F:
             if self.video.state() == QMediaPlayer.PlayingState or self.video.state() == QMediaPlayer.PausedState:
-                self.captureThread = Frame(self.currentVideoPath, self.video.position())
-                self.captureThread.start()
+                if (self.captureThreadCreated == False):
+                    self.captureThreadCreated = True
+                    self.captureThread = Frame(self.currentVideoPath, self.video.position())
+                    self.captureThread.start()
+                else:
+                    if (self.captureThread.isFinished()):
+                        self.captureThread = Frame(self.currentVideoPath, self.video.position())
+                        self.captureThread.start()
