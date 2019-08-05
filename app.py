@@ -1,4 +1,6 @@
 import csv
+import os
+import pathlib
 from operator import add, sub
 
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
@@ -10,6 +12,7 @@ from PyQt5.QtWidgets import QMessageBox, QAbstractItemView, QTableWidgetItem, QT
 
 from gui.slider import Slider
 from gui.button import Button
+from gui.frame import Frame
 
 class App(QMainWindow):
 
@@ -21,10 +24,14 @@ class App(QMainWindow):
         self.statistics = []
         self.isPlaying = False
         self.importedVideos = {}
+        self.framesPath = os.path.dirname(os.path.realpath(__file__)) + '/frames'
         self.initGUI()
         self.menu()
 
     def initGUI(self):
+
+        if not os.path.exists(self.framesPath): 
+            os.mkdir(self.framesPath)
 
         self.statusBar().showMessage('Status: Ready')
         self.setWindowTitle("Object Detection App")
@@ -218,19 +225,19 @@ class App(QMainWindow):
                 if info.baseName() in self.importedVideos or info.baseName() in self.importedCSV:
                     QMessageBox.critical(self, "Error", "File already exist", buttons=QMessageBox.Ok)
                 else:
-                    if isVideo: self.importedVideos[info.baseName()] = QUrl.fromLocalFile(files[i])
+                    if (isVideo):
+                        self.importedVideos[info.baseName()] = QUrl.fromLocalFile(files[i])
                     else: self.readCSV(info.filePath(), info.baseName())
                     size = str(info.size()/scaler)+extensionTag
                     last_modified = info.lastModified().toString()[4:10]
                     self.addItemToTable(self.explorerView, [info.baseName(), size, fileType, last_modified])
-                self.statusBar().showMessage('Status: Ready')
-                    
+                self.statusBar().showMessage('Status: Ready')      
 
     def openFile(self, fileType):
         options = QFileDialog.DontUseNativeDialog
-        files, _ = QFileDialog.getOpenFileName(self, "Open Movie","", "{0} files (*.{0})".format(fileType), QDir.currentPath(), options)
-        print(files)
-        return [files]
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open Movie","", "{0} files (*.{0})".format(fileType), QDir.currentPath(), options)
+        self.currentVideoPath = fileName
+        return [fileName]
 
     def loadData(self):
         self.statusBar().showMessage('Status: Loading Video/Image')
@@ -363,3 +370,7 @@ class App(QMainWindow):
         elif event.key() == Qt.Key_S:
             self.stopVideo()
             self.resetSlider()
+        elif event.key() == Qt.Key_F:
+            if self.video.state() == QMediaPlayer.PlayingState or self.video.state() == QMediaPlayer.PausedState:
+                self.captureThread = Frame(self.currentVideoPath, self.video.position())
+                self.captureThread.start()
