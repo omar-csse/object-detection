@@ -98,8 +98,8 @@ class App(QMainWindow):
         self.playerLabel = QLabel("Player", self)
         
         # Video
-        self.videoWidget = self.setupVideoWidget(width=400, height=350)
-        self.trainedVideoWidget = self.setupVideoWidget(width=400, height=350)
+        self.videoWidget = QVideoWidget()
+        self.trainedVideoWidget = QVideoWidget()
         self.video = self.setupVideo(self.videoWidget)
         self.currentVideoState = self.video.state()
         self.trainedVideo = self.setupVideo(self.trainedVideoWidget)
@@ -112,7 +112,6 @@ class App(QMainWindow):
         self.videoBtnsWidgetLayout = QHBoxLayout(self.videoBtnsWidget)
         # playe video btn
         self.playVideoBtn = Button("Play/Pause")
-        self.playVideoBtn.setEnabled(False)
         self.playVideoBtn.pressed.connect(self.playVideo)
         # Stop video btn
         self.stopVideoBtn = Button("Stop")
@@ -122,7 +121,7 @@ class App(QMainWindow):
         self.durationLabel = QLabel('00:00:00')
         self.videoSlider = Slider()
         self.videoSlider.setOrientation(Qt.Horizontal)
-        self.videoSlider.setMinimumWidth(250)
+        self.videoSlider.setMinimumWidth(160)
         self.videoSlider.setTickInterval(1)
         self.videoSlider.pressed.connect(self.pauseVideo)
         self.videoSlider.released.connect(self.sliderChanged)
@@ -257,7 +256,6 @@ class App(QMainWindow):
         content = QMediaContent(path)
         self.video.setMedia(content)
         self.trainedVideo.setMedia(content)
-        self.playVideoBtn.setEnabled(True)
 
     @staticmethod
     def setupVideoWidget(width=600, height=400):
@@ -320,6 +318,8 @@ class App(QMainWindow):
         self.videoSlider.setRange(0, duration)
 
     def playVideo(self):
+        self.videoWidget.resize(431, 206)
+        self.trainedVideoWidget.resize(431, 224)
         if self.video.state() == QMediaPlayer.PlayingState:
             self.video.pause()
             self.trainedVideo.pause()
