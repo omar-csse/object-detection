@@ -20,6 +20,7 @@ class App(QMainWindow):
         super(App, self).__init__(parent)
         self.totalDolphins = 0
         self.totalSurfers = 0
+        self.totalSharks = 0
         self.importedCSV = {}
         self.statistics = []
         self.isPlaying = False
@@ -77,8 +78,10 @@ class App(QMainWindow):
         # Total surfers and Total dolphins
         self.surfersLabel = QLabel("Total surfers:  {}".format(self.totalSurfers), self)
         self.dolphinsLabel = QLabel("Total dolphins:  {}".format(self.totalDolphins), self)
+        self.sharksLabel = QLabel("Total sharks:  {}".format(self.totalSharks), self)
         self.dolphinsLabel.setAlignment(Qt.AlignCenter)
         self.surfersLabel.setAlignment(Qt.AlignCenter)
+        self.sharksLabel.setAlignment(Qt.AlignCenter)
 
         self.buttonsWidget2 = QWidget()
         self.buttonsWidget2Layout = QHBoxLayout(self.buttonsWidget2)
@@ -146,9 +149,9 @@ class App(QMainWindow):
         mainLayout.addWidget(self.spaceLabel, 9, 0)
         mainLayout.addWidget(self.statView, 10, 0)
         mainLayout.addWidget(self.spaceLabel, 11, 0)
-        mainLayout.addWidget(self.spaceLabel, 12, 0)
-        mainLayout.addWidget(self.surfersLabel, 13, 0)
-        mainLayout.addWidget(self.dolphinsLabel, 14, 0)
+        mainLayout.addWidget(self.surfersLabel, 12, 0)
+        mainLayout.addWidget(self.dolphinsLabel, 13, 0)
+        mainLayout.addWidget(self.sharksLabel, 14, 0)
         mainLayout.addWidget(self.buttonsWidget2, 15, 0)
         mainLayout.addWidget(self.spaceLabel, 0, 1)
         mainLayout.addWidget(self.inputLabel, 0, 2)

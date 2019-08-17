@@ -51,4 +51,5 @@ docs/_build/
 
 .csv*
 frames/
+**frames**
 **.DS_Store**

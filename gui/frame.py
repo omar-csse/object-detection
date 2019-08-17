@@ -12,7 +12,7 @@ class Frame(QThread):
         self.videoTime = time
         self.video = cv2.VideoCapture(videoPath)
         self.videoName = os.path.basename(videoPath)
-        self.framesPath = os.path.dirname(os.path.realpath(__file__)) + '/../frames/' + self.videoName + '/'
+        self.framesPath = os.path.dirname(os.path.realpath(__file__)) + '/frames/' + self.videoName + '/'
 
     def run(self):
 
