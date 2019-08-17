@@ -4,17 +4,23 @@ from PyQt5.QtWidgets import QApplication
 
 from gui.app import App
 
-def clearScreen():
-    os.system('cls')  # For Windows
-    os.system('clear')  # For Linux/OS X
-    pass
 
-def main():
-    app = QApplication(sys.argv)
-    clearScreen()
-    objectDetectionApp = App()
-    objectDetectionApp.run()
-    sys.exit(app.exec_())
+class Main(object):
+
+    def __init__(self):
+        pass
+
+    def clearScreen(self):
+        os.system('cls')  # For Windows
+        os.system('clear')  # For Linux/OS X
+
+    def main(self):
+        app = QApplication(sys.argv)
+        self.clearScreen()
+        objectDetectionApp = App()
+        objectDetectionApp.run()
+        sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
-    main()
+    Main().main()
