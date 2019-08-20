@@ -73,7 +73,7 @@ class App(QMainWindow):
 
         # Statistics
         self.statLabel = QLabel("Statistics:", self)
-        self.statView = self.createTable("# Object Confidence", False, False, minHeight=160)
+        self.statView = self.createTable("# Object Confidence XMin YMin XMax YMax", False, False, minHeight=160)
 
         # Total surfers and Total dolphins
         self.surfersLabel = QLabel("Total surfers:  {}".format(self.totalSurfers), self)
@@ -110,6 +110,7 @@ class App(QMainWindow):
         self.video.positionChanged.connect(self.positionChanged)
         self.video.positionChanged.connect(self.handleLabel)
         self.video.durationChanged.connect(self.durationChanged)
+        self.video.stateChanged.connect(self.resetVideo)
 
         self.videoBtnsWidget = QWidget()
         self.videoBtnsWidgetLayout = QHBoxLayout(self.videoBtnsWidget)
@@ -127,7 +128,7 @@ class App(QMainWindow):
         self.videoSlider.setMinimumWidth(160)
         self.videoSlider.setTickInterval(1)
         self.videoSlider.pressed.connect(self.pauseVideo)
-        self.videoSlider.released.connect(self.sliderChanged)
+        self.videoSlider.released.connect(self.playVideo)
         self.videoSlider.sliderMoved.connect(self.setPosition)
         self.videoSlider.sliderMoved.connect(self.handleLabel)
 
@@ -282,10 +283,11 @@ class App(QMainWindow):
     def exportCSV(self):
         print("csv file will be exported")
         if not self.statistics:
-            QMessageBox.critical(self, "Error", "Process the data first", buttons=QMessageBox.Ok)
+            QMessageBox.critical(self, "Error", "No statistics available", buttons=QMessageBox.Ok)
         else:
             with open("statistics.csv", 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
+                writer.writerow(['File', 'PredictionString'])
                 for i in range(len(self.statistics)):
                     writer.writerow(self.statistics[i])
                     self.statusBar().showMessage('Status: statistics exported')
@@ -334,13 +336,10 @@ class App(QMainWindow):
         self.video.stop()
         self.trainedVideo.stop()
 
-    def sliderChanged(self):
-        if self.currentVideoState == QMediaPlayer.PausedState:
-            self.video.pause()
-            self.trainedVideo.pause()
-        else:
-            self.video.play()
-            self.trainedVideo.play()
+    def resetVideo(self):
+        if self.video.state() == QMediaPlayer.StoppedState:
+            self.stopVideo()
+            self.resetSlider()
 
     def changeVideoFrame(self, sign):
         self.trainedVideo.setPosition(sign(self.trainedVideo.position(), 100*60))
@@ -376,11 +375,10 @@ class App(QMainWindow):
             self.resetSlider()
         elif event.key() == Qt.Key_F:
             if self.video.state() == QMediaPlayer.PlayingState or self.video.state() == QMediaPlayer.PausedState:
-                if (self.captureThreadCreated == False):
+                if self.captureThreadCreated == False:
                     self.captureThreadCreated = True
                     self.captureThread = Frame(self.currentVideoPath, self.video.position())
                     self.captureThread.start()
-                else:
-                    if (self.captureThread.isFinished()):
-                        self.captureThread = Frame(self.currentVideoPath, self.video.position())
-                        self.captureThread.start()
+                elif self.captureThread.isFinished():
+                    self.captureThread = Frame(self.currentVideoPath, self.video.position())
+                    self.captureThread.start()
