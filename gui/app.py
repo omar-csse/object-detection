@@ -333,6 +333,7 @@ class App(QMainWindow):
             self.trainedVideo.play()
 
     def stopVideo(self):
+        self.videoSlider.setValue(0)
         self.video.stop()
         self.trainedVideo.stop()
 
