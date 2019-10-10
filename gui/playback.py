@@ -6,10 +6,11 @@ import cv2
 import pandas as pd
 import numpy as np
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtGui import QImage
 
 class PlayBack(QThread): 
 
-    imageSignal = pyqtSignal(list)
+    imageSignal = pyqtSignal(QImage)
 
     def __init__(self, videoPath, csvPath):
         super().__init__()
@@ -24,12 +25,10 @@ class PlayBack(QThread):
         self.videoName = os.path.basename(videoPath)
         self.classes = []
 
-
     def run(self):
         self.readCSV()
         self.start_playback()
         
-    
     def readCSV(self):
         self.labels = pd.read_csv(self.csvPath)
         self.expLabels = self.labels['PredictionString'].str.split(' ', expand=True)
@@ -42,9 +41,9 @@ class PlayBack(QThread):
         print(self.classes)
         self.colours = np.random.uniform(0, 255, size=(len(self.classes), 3))
 
-
     def drawCsvAnnotations(self, data, expandedData, frameNumber, frame):
         item = data[data.FrameNumber == frameNumber]
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         for index, row in item.iterrows():
             for i in range(0, expandedData.shape[1], 6):
                 if expandedData[i][index] == None or not expandedData[i][index]:
@@ -63,6 +62,15 @@ class PlayBack(QThread):
         
         return frame
 
+    def convert_CVmatToQpixmap(self, CVmat):
+        # COLOR_BGR2RGB
+        CVmat = cv2.cvtColor(CVmat, cv2.COLOR_BGR2RGB)
+
+        # CVmat to Qimage
+        height, width, dim = CVmat.shape
+        bytesPerLine = dim * width
+        qimg = QImage(CVmat.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        return qimg
 
     def start_playback(self):
     
@@ -72,9 +80,9 @@ class PlayBack(QThread):
         for i in range(self.nb_frames):
             ret, frame = self.video_reader.read()
             image = self.drawCsvAnnotations(self.labels, self.expLabels, i, frame)
+            qimage = self.convert_CVmatToQpixmap(image)
             self.video_writer.write(np.uint8(image))
-            self.imageSignal.emit(list(image))
-            
+            self.imageSignal.emit(qimage)
 
         print("Detection done...")
         # release resources

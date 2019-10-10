@@ -365,7 +365,7 @@ class App(QMainWindow):
         #     self.video.pause()
         # else:
         #     self.video.play()
-    
+
     def showimg(self, img):
         pixmap = QPixmap(img)
         self.trainedVideoLabel.setPixmap(pixmap)
