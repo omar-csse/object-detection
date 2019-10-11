@@ -1,6 +1,9 @@
 import csv
 import os
+import sys
 import pathlib
+import logging
+import traceback
 from operator import add, sub
 import cv2
 import numpy as np
@@ -17,6 +20,9 @@ from PyQt5.QtGui import QPixmap
 from gui.slider import Slider
 from gui.button import Button
 from gui.playback import PlayBack
+from gui.saveVideo import SaveVideo
+# from yolov3.yolo3 import YOLOv3
+# from inceptionv4.inceptionv4 import InceptionV4
 
 
 class App(QMainWindow):
@@ -33,10 +39,15 @@ class App(QMainWindow):
         self.statistics = []
         self.isPlaying = False
         self.playbackThreadCreated = False
+        self.saveVideoThreadCreated = False
+        self.yolov3ThreadCreated = False
+        self.inceptionv4ThreadCreated = False
 
         self.labels = None
         self.classes = []
         self.expLabels = None
+        self.detectedFrames = []
+        self.detectedStats = []
 
         self.initGUI()
         self.menu()
@@ -128,22 +139,21 @@ class App(QMainWindow):
         self.videoBtnsWidgetLayout = QHBoxLayout(self.videoBtnsWidget)
         # playe video btn
         self.playVideoBtn = Button("Play/Pause")
-        # self.playVideoBtn.setEnabled(False)
         self.playVideoBtn.pressed.connect(self.playVideo)
         # Stop video btn
         self.stopVideoBtn = Button("Stop")
-        # self.stopVideoBtn.setEnabled(False)
         self.stopVideoBtn.released.connect(self.resetSlider)
         self.stopVideoBtn.pressed.connect(self.stopVideo)
 
         self.durationLabel = QLabel('00:00:00')
         self.videoSlider = Slider()
+        self.videoSlider.setEnabled(False)
         self.videoSlider.setOrientation(Qt.Horizontal)
         self.videoSlider.setMinimumWidth(160)
         self.videoSlider.setTickInterval(1)
-        self.videoSlider.pressed.connect(self.pauseVideo)
-        self.videoSlider.released.connect(self.playVideo)
-        self.videoSlider.sliderMoved.connect(self.setPosition)
+        # self.videoSlider.pressed.connect(self.pauseVideo)
+        # self.videoSlider.released.connect(self.playVideo)
+        # self.videoSlider.sliderMoved.connect(self.setPosition)
         self.videoSlider.sliderMoved.connect(self.handleLabel)
 
         self.videoBtnsWidgetLayout.addWidget(self.playVideoBtn)
@@ -235,13 +245,16 @@ class App(QMainWindow):
         for i, item in enumerate(data):
             model.setItem(currentRow , i, QTableWidgetItem(item))
 
+    def removeAllItemsFromTable(self, tableView):
+        for row in range(tableView.rowCount()):
+            tableView.removeRow(row)
+
     def removeItemFromTable(self, fileType):
         for row in range(self.explorerView.rowCount()):
             item = self.explorerView.item(row, 2)
-            print(item.text())
-            if str(item.text()) == fileType:
+            if item.text() == fileType:
                 self.explorerView.removeRow(row)
-        pass
+                break
 
     def addFilesToExplorer(self, fileName, fileType, scaler, extensionTag, isVideo=True):
         if fileName:
@@ -254,6 +267,7 @@ class App(QMainWindow):
                 if (isVideo):
                     self.removeItemFromTable("video")
                     self.importedVideoPath = QUrl.fromLocalFile(fileName)
+                    self.setMedia(self.importedVideoPath)
                     self.importedVideo = info.baseName()
                     self.statusBar().showMessage('Status: Video/Image added')
                 else:
@@ -295,16 +309,83 @@ class App(QMainWindow):
         return videoWidget
 
     def processData(self):
-        # try:
-            path, isVideo = self.selectedData()
-            if isVideo: self.setMedia(path)
+        try:
+
+            # call the two dlms for prediction here:
+            if self.getDLM() == 0:
+                self.yolov3Thread()
+            elif self.getDLM() == 1:
+                self.inceptionv4Thread()
+
             print("train in {} algorithm".format(self.getDLM()))
             self.statusBar().showMessage('Status: Processing data in {}'.format(self.getDLM()))
-        # except (IndexError, AttributeError, TypeError):
-        #     QMessageBox.critical(self, "Error", "Select a file from explorer", buttons=QMessageBox.Ok)
+
+
+        except (IndexError, AttributeError, TypeError):
+            QMessageBox.critical(self, "Error", "Select a file from explorer", buttons=QMessageBox.Ok)
+
+    def inceptionv4Thread(self):
+        if self.inceptionv4ThreadCreated == False:
+            self.inceptionv4ThreadCreated = True
+            self.inceptionv4Thread = InceptionV4(self.importedVideoPath.toString())
+            self.inceptionv4Thread.doneSignal.connect(self.predictionDone)
+            self.inceptionv4Thread.predictionSignal.connect(self.inceptionv4Result)
+            self.inceptionv4Thread.frameSignal.connect(self.setFrame_h_w)
+            self.inceptionv4Thread.start()
+        elif self.inceptionv4Thread.isFinished():
+            self.inceptionv4Thread = InceptionV4(self.importedVideoPath.toString())
+            self.inceptionv4Thread.doneSignal.connect(self.predictionDone)
+            self.inceptionv4Thread.predictionSignal.connect(self.inceptionv4Result)
+            self.inceptionv4Thread.frameSignal.connect(self.setFrame_h_w)
+            self.inceptionv4Thread.start()
+    
+    def inceptionv4Result(self, img, qimg, stats, currentFrame):
+        print(stats)
+        pass
+
+    def yolov3Thread(self):
+        if self.yolov3ThreadCreated == False:
+            self.yolov3ThreadCreated = True
+            self.yolov3Thread = YOLOv3(self.importedVideoPath.toString())
+            self.yolov3Thread.doneSignal.connect(self.predictionDone)
+            self.yolov3Thread.predictionSignal.connect(self.yolov3Result)
+            self.yolov3Thread.frameSignal.connect(self.setFrame_h_w)
+            self.yolov3Thread.start()
+        elif self.yolov3Thread.isFinished():
+            self.yolov3Thread = YOLOv3(self.importedVideoPath.toString())
+            self.yolov3Thread.doneSignal.connect(self.predictionDone)
+            self.yolov3Thread.predictionSignal.connect(self.yolov3Result)
+            self.yolov3Thread.frameSignal.connect(self.setFrame_h_w)
+            self.yolov3Thread.start()
+
+    def yolov3Result(self, img, qimg, stats, currentFrame):
+        pass
+
+    def predictionDone(self):
+        self.statusBar().showMessage('Status: Video Detection is done')
 
     def saveVideo(self):
-        print("video will be saved")
+
+        try: 
+            videopath = os.path.dirname(os.path.realpath(__file__)) + '/../out/{}_predicted.mp4'.format(self.importedVideo)
+            if self.playbackThread.isFinished():
+                if self.saveVideoThreadCreated == False:
+                    self.saveVideoThreadCreated = True
+                    self.saveVideoThread = SaveVideo(videopath, self.detectedFrames, self.frame_w, self.frame_h)
+                    self.saveVideoThread.doneSignal.connect(self.videoSaved)
+                    self.saveVideoThread.start()
+                    self.saveVideoThread.Pause = True
+                elif self.saveVideoThread.isFinished():
+                    self.saveVideoThread = SaveVideo(videopath, self.detectedFrames, self.frame_w, self.frame_h)
+                    self.saveVideoThread.doneSignal.connect(self.videoSaved)
+                    self.saveVideoThread.start()
+            else: 
+                QMessageBox.critical(self, "Error", "Video is still running", buttons=QMessageBox.Ok)
+        except Exception as e: 
+            logging.error(traceback.format_exc())
+            QMessageBox.critical(self, "Error", "No available frames", buttons=QMessageBox.Ok)
+
+    def videoSaved(self):
         self.statusBar().showMessage('Status: Video saved')
 
     def exportCSV(self):
@@ -349,27 +430,50 @@ class App(QMainWindow):
         self.videoSlider.setRange(0, duration)
 
     def playVideo(self):
+        try:
+            if self.importedVideoPath is not None and self.importedCSVPath is not None:
+                if self.playbackThreadCreated == False:
+                    self.playbackThreadCreated = True
+                    self.playLoadedVideo()
+                    self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath)
+                    self.playbackThread.imageSignal.connect(self.showimg)
+                    self.playbackThread.frameSignal.connect(self.setFrame_h_w)
+                    self.playbackThread.start()
+                elif self.playbackThread.isFinished():
+                    self.playLoadedVideo()
+                    self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath)
+                    self.playbackThread.imageSignal.connect(self.showimg)
+                    self.playbackThread.frameSignal.connect(self.setFrame_h_w)
+                    self.playbackThread.start()
+                elif not self.playbackThread.isFinished():
+                    self.playLoadedVideo()
+                    self.playbackThread.Pause = not self.playbackThread.Pause
+            else :
+                QMessageBox.critical(self, "Error", "Load a CSV file or process video to train", buttons=QMessageBox.Ok)
+        except Exception as e: 
+            logging.error(traceback.format_exc())
+            QMessageBox.critical(self, "Error", "Load a CSV file or process video to train", buttons=QMessageBox.Ok)
 
-        if self.playbackThreadCreated == False:
-            self.playbackThreadCreated = True
-            self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath)
-            self.playbackThread.imageSignal.connect(self.showimg)
-            self.playbackThread.start()
-        elif self.playbackThread.isFinished():
-            self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath)
-            self.playbackThread.imageSignal.connect(self.showimg)
-            self.playbackThread.start()
+    def playLoadedVideo(self):
+        self.videoWidget.resize(431, 206)
+        if self.video.state() == QMediaPlayer.PlayingState: self.video.pause()
+        else: self.video.play()
 
-        # self.videoWidget.resize(431, 206)
-        # if self.video.state() == QMediaPlayer.PlayingState:
-        #     self.video.pause()
-        # else:
-        #     self.video.play()
+    def setFrame_h_w(self, frame_w, frame_h):
+        self.statusBar().showMessage('Status: playing back')
+        self.frame_w = frame_w
+        self.frame_h = frame_h
 
-    def showimg(self, img):
-        pixmap = QPixmap(img)
+    def showimg(self, img, qimage, stats, currentFrame):
+        self.currentFrame = currentFrame
+        self.detectedFrames.append(img)
+        self.detectedStats.append(stats)
+        self.removeAllItemsFromTable(self.statView)
+        for i, row in enumerate(stats):
+            self.addItemToTable(self.statView, row)
+
+        pixmap = QPixmap(qimage)
         self.trainedVideoLabel.setPixmap(pixmap)
-        pass
 
     def stopVideo(self):
         self.videoSlider.setValue(0)
@@ -380,9 +484,6 @@ class App(QMainWindow):
             self.stopVideo()
             self.resetSlider()
 
-    def changeVideoFrame(self, sign):
-        self.video.setPosition(sign(self.video.position(), 100*60))
-
     def selectedData(self):
         index = self.explorerView.selectionModel().currentIndex().row()
         item_type = self.explorerView.item(index, 2).text()
@@ -391,23 +492,15 @@ class App(QMainWindow):
         if item_type == "video" or item_type == "img": return self.importedVideoPath, True
         else: return self.importedCSVPath, False
 
-    def pauseVideo(self):
-        self.currentVideoState = self.video.state()
-        self.video.pause()
-
     def getDLM(self):
         print("Index: {} - Algorithm: {}".format(self.dlmOptions.currentIndex(), self.dlmOptions.currentText()))
         return self.dlmOptions.currentIndex()
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Right:
-            self.changeVideoFrame(add)
-        elif event.key() == Qt.Key_Left:
-            self.changeVideoFrame(sub)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Space:
             self.playVideo()
         elif event.key() == Qt.Key_S:
+            self.playbackThread.terminate()
+            self.trainedVideoLabel.clear()
             self.stopVideo()
             self.resetSlider()
