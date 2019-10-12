@@ -467,27 +467,31 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
 
     def playVideo(self):
         try:
-            if self.importedVideoPath is not None and self.importedCSVPath is not None:
-                if self.playbackThread is None:
-                    self.playLoadedVideo()
-                    self.canSaveVideo = False
-                    self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath)
-                    self.playbackThread.imageSignal.connect(self.showimg)
-                    self.playbackThread.frameSignal.connect(self.setFrame_h_w)
-                    self.playbackThread.start()
-                elif self.playbackThread.isFinished():
-                    self.playLoadedVideo()
-                    self.canSaveVideo = False
-                    self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath)
-                    self.playbackThread.imageSignal.connect(self.showimg)
-                    self.playbackThread.frameSignal.connect(self.setFrame_h_w)
-                    self.playbackThread.doneSignal.connect(self.threadDone)
-                    self.playbackThread.start()
-                elif not self.playbackThread.isFinished():
-                    self.playLoadedVideo()
-                    self.playbackThread.Pause = not self.playbackThread.Pause
+            if self.canSaveVideo == False:
+                QMessageBox.critical(self, "Error", "Detection or playback is occuring", buttons=QMessageBox.Ok)
             else :
-                QMessageBox.critical(self, "Error", "Load a CSV file or process video to train", buttons=QMessageBox.Ok)
+                if self.importedVideoPath is not None and self.importedCSVPath is not None:
+                    if self.playbackThread is None:
+                        self.playLoadedVideo()
+                        self.canSaveVideo = False
+                        self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath)
+                        self.playbackThread.imageSignal.connect(self.showimg)
+                        self.playbackThread.frameSignal.connect(self.setFrame_h_w)
+                        self.playbackThread.doneSignal.connect(self.threadDone)
+                        self.playbackThread.start()
+                    elif self.playbackThread.isFinished():
+                        self.playLoadedVideo()
+                        self.canSaveVideo = False
+                        self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath)
+                        self.playbackThread.imageSignal.connect(self.showimg)
+                        self.playbackThread.frameSignal.connect(self.setFrame_h_w)
+                        self.playbackThread.doneSignal.connect(self.threadDone)
+                        self.playbackThread.start()
+                    elif not self.playbackThread.isFinished():
+                        self.playLoadedVideo()
+                        self.playbackThread.Pause = not self.playbackThread.Pause
+                    else :
+                        QMessageBox.critical(self, "Error", "Load a CSV file or process video to train", buttons=QMessageBox.Ok)
         except Exception as e: 
             logging.error(traceback.format_exc())
             QMessageBox.critical(self, "Error", "Load a CSV file or process video to train", buttons=QMessageBox.Ok)
@@ -539,12 +543,15 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
 
     def stopVideo(self):
         try:
-            self.videoSlider.setValue(0)
-            self.video.stop()
-            self.playbackThread.stop()
-            self.trainedVideoLabel.clear()
-            self.removeAllItemsFromTable(self.statView)
-            self.resetSlider()
+            if self.canSaveVideo == False:
+                QMessageBox.critical(self, "Error", "Detection or playback is occuring", buttons=QMessageBox.Ok)
+            else :
+                self.videoSlider.setValue(0)
+                self.video.stop()
+                self.playbackThread.stop()
+                self.trainedVideoLabel.clear()
+                self.removeAllItemsFromTable(self.statView)
+                self.resetSlider()
         except Exception as e: 
             logging.error(traceback.format_exc())
             QMessageBox.critical(self, "Error", "Load a CSV file or process video to train", buttons=QMessageBox.Ok)
