@@ -4,12 +4,15 @@ import time
 import cv2
 import pandas as pd
 import numpy as np
+
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QImage
 
 class PlayBack(QThread): 
 
+    Stop = False
     Pause = False
+    doneSignal = pyqtSignal(str)
     imageSignal = pyqtSignal(list, QImage, list, int)
     frameSignal = pyqtSignal(int, int)
 
@@ -43,7 +46,6 @@ class PlayBack(QThread):
 
     def drawCsvAnnotations(self, data, expandedData, frameNumber, frame):
         self.statisticsInFrme = []
-        objectCounter = 0
         item = data[data.FrameNumber == frameNumber]
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         for index, row in item.iterrows():
@@ -58,8 +60,7 @@ class PlayBack(QThread):
                 yMin = int(float(expandedData[i + 4][index]) * frame.shape[0])
                 yMax = int(float(expandedData[i + 5][index]) * frame.shape[0])
                 cv2.rectangle(frame,(xMin, yMin),(xMax, yMax),colour,3)
-                objectCounter = objectCounter + 1
-                st_row = [str(objectCounter), objClass, str(confidence), str(xMin), str(xMax), str(yMin), str(yMax)]
+                st_row = [objClass, str(confidence), str(xMin), str(xMax), str(yMin), str(yMax)]
                 self.statisticsInFrme.append(st_row)
                 y = yMin - 25 if yMin - 25 > 25 else yMin + 25
                 label = "{}: {:.2f}%".format(objClass, confidence * 100)
@@ -81,15 +82,27 @@ class PlayBack(QThread):
 
         print(self.videoPath)
 
-        for i in range(self.nb_frames):
+        i = 0
+        while (i < self.nb_frames and self.Stop is False):
+
             while (self.Pause): pass
             ret, frame = self.video_reader.read()
             image = self.drawCsvAnnotations(self.labels, self.expLabels, i, frame)
             qimage = self.convert_CVmatToQpixmap(image)
             time.sleep(1/35)
-            self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, i)
+            if self.Stop == False:
+                self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, i)
+            i = i + 1
+        
+        i = 0
 
+        self.doneSignal.emit("Video finished playingback")
         print("Detection done...")
         # release resources
         self.video_reader.release()
         cv2.destroyAllWindows()
+
+    def stop(self):
+        self.doneSignal.emit("Video finished playingback")
+        self.Stop = True
+        self.wait()

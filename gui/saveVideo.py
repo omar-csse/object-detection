@@ -8,7 +8,7 @@ from PyQt5.QtGui import QImage
 
 class SaveVideo(QThread): 
 
-    doneSignal = pyqtSignal()
+    doneSignal = pyqtSignal(str)
 
     def __init__(self, videoPath, frames, frame_w, frame_h):
         super().__init__()
@@ -26,4 +26,4 @@ class SaveVideo(QThread):
         self.video_writer.release()
         cv2.destroyAllWindows()
 
-        self.doneSignal.emit()
+        self.doneSignal.emit("video is saved")

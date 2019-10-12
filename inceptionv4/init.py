@@ -115,7 +115,7 @@ def predict(idx,img):
 			ROIs_padded[0, curr_shape[1]:, :] = ROIs[0, 0, :]
 			ROIs = ROIs_padded
 
-		[P_cls, P_regr] = model_classifier_only.predict([F, ROIs])
+		[P_cls, P_regr] = model_classifier.predict([F, ROIs])
 
 		for ii in range(P_cls.shape[1]):
 
@@ -172,6 +172,9 @@ def predict(idx,img):
 	print(all_dets)
 	return(img, b_box)
 
+def getModels():
+    return model_rpn, model_classifier
+
 	
 class_mapping = C.class_mapping
 
@@ -210,9 +213,14 @@ rpn_layers = nn.rpn(shared_layers, num_anchors)
 classifier = nn.classifier(feature_map_input, roi_input, C.num_rois, nb_classes=len(class_mapping), trainable=True)
 
 model_rpn = Model(img_input, rpn_layers)
+with open(os.path.dirname(os.path.realpath(__file__)) + "/model_rpn.json", "w") as json_file:
+    json_file.write(model_rpn.to_json())
+
 model_classifier_only = Model([feature_map_input, roi_input], classifier)
 
 model_classifier = Model([feature_map_input, roi_input], classifier)
+with open(os.path.dirname(os.path.realpath(__file__)) + "/model_classifier.json", "w") as json_file:
+    json_file.write(model_classifier.to_json())
 
 print('Loading weights from {}'.format(C.model_path))
 model_rpn.load_weights(os.path.dirname(os.path.realpath(__file__)) + C.model_path, by_name=True)
