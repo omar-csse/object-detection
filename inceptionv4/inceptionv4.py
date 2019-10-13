@@ -25,7 +25,7 @@ class InceptionV4(QThread):
 
     doneSignal = pyqtSignal(str, bool)
     frameSignal = pyqtSignal(int, int)
-    predictionSignal = pyqtSignal(list, QImage, list, int)
+    predictionSignal = pyqtSignal(list, QImage, list, int, bool)
 
     def __init__(self, videoPath):
         super().__init__()
@@ -65,7 +65,7 @@ class InceptionV4(QThread):
             (frame,bbox_temp) = predict(i, image)
             frames_out.append(frame)
             b_box.append(bbox_temp)
-            self.predictionSignal.emit(list(frames_out), self.convert_CVmatToQpixmap(frames_out), b_box, i)
+            self.predictionSignal.emit(list(frames_out), self.convert_CVmatToQpixmap(frames_out), b_box, i, False)
 
         self.doneSignal.emit("InceptionV4 prediction is done", True)
         K.clear_session()

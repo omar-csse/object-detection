@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import time
+import datetime
 
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
@@ -60,6 +61,7 @@ class App(QMainWindow):
         self.canSaveVideo = True
         self.detecting = False
         self.playingback = False
+        self.minutes = 0
 
         self.initGUI()
         self.menu()
@@ -137,11 +139,9 @@ class App(QMainWindow):
 
         # Pixmap label
         self.trainedVideoLabel = QLabel()
-        self.trainedVideoLabel.setMaximumSize(400, 300)
+        self.trainedVideoLabel.setMaximumSize(400, 225)
         self.trainedVideoLabel.setScaledContents(True)
 
-        self.video.positionChanged.connect(self.positionChanged)
-        self.video.positionChanged.connect(self.handleLabel)
         self.video.durationChanged.connect(self.durationChanged)
         self.video.stateChanged.connect(self.resetVideo)
 
@@ -155,13 +155,12 @@ class App(QMainWindow):
         self.stopVideoBtn.released.connect(self.resetSlider)
         self.stopVideoBtn.released.connect(self.stopVideo)
 
-        self.durationLabel = QLabel('00:00:00')
+        self.durationLabel = QLabel('00:00')
         self.videoSlider = Slider()
         self.videoSlider.setEnabled(False)
         self.videoSlider.setOrientation(Qt.Horizontal)
         self.videoSlider.setMinimumWidth(160)
         self.videoSlider.setTickInterval(1)
-        self.videoSlider.sliderMoved.connect(self.handleLabel)
 
         self.videoBtnsWidgetLayout.addWidget(self.playVideoBtn)
         self.videoBtnsWidgetLayout.addWidget(self.stopVideoBtn)
@@ -414,6 +413,9 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         self.trainedVideoLabel.clear()
         self.removeAllItemsFromTable(self.statView)
         self.statusBar().showMessage("Status: " + msg)
+        self.durationLabel.setText("00:00")
+        self.videoSlider.setValue(0)
+        self.videoSlider.repaint()
 
     def saveVideo(self):
         try: 
@@ -462,28 +464,17 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
     def setPosition(self, position):
         self.video.setPosition(position)
 
-    def handleLabel(self):
-        self.durationLabel.clear()
-        mtime = QTime(0,0,0,0)
-        self.time = mtime.addMSecs(self.video.position())
-        self.durationLabel.setText(self.time.toString())
-
     def resetSlider(self):
         self.videoSlider.setValue(0)
 
     def durationChanged(self, duration):
-        seconds = (duration/1000) % 60
-        minutes = (duration/60000) % 60
-        hours = (duration/3600000) % 24
-        self.durationLabel.setText(QTime(hours, minutes,seconds).toString())
-        self.videoSlider.setRange(0, duration)
+        self.videoSlider.setRange(0, duration-1000)
 
     def playVideo(self):
         try:
             if self.detecting is False:
                 if self.importedVideoPath is not None and (self.importedCSVPath is not None or self.detectedStats):
                     if self.playbackThread is None:
-                        self.playLoadedVideo()
                         self.canSaveVideo = False
                         self.playingback = True
                         self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath, self.detectedStats, self.detectedFrames)
@@ -491,15 +482,18 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
                         self.playbackThread.frameSignal.connect(self.setFrame_h_w)
                         self.playbackThread.doneSignal.connect(self.threadDone)
                         self.playbackThread.errorSignal.connect(self.errorMsg)
+                        self.playLoadedVideo()
+                        self.clearStats()
                         self.playbackThread.start()
                     elif self.playbackThread.isFinished():
-                        self.playLoadedVideo()
                         self.canSaveVideo = False
                         self.playingback = True
                         self.playbackThread = PlayBack(self.importedVideoPath.toString(), self.importedCSVPath, self.detectedStats, self.detectedFrames)
                         self.playbackThread.imageSignal.connect(self.showimg)
                         self.playbackThread.frameSignal.connect(self.setFrame_h_w)
                         self.playbackThread.doneSignal.connect(self.threadDone)
+                        self.playLoadedVideo()
+                        self.clearStats()
                         self.playbackThread.start()
                     elif not self.playbackThread.isFinished():
                         self.playLoadedVideo()
@@ -524,7 +518,7 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         QMessageBox.critical(self, "Error", msg, buttons=QMessageBox.Ok)
 
     def playLoadedVideo(self):
-        self.videoWidget.resize(431, 206)
+        self.videoWidget.resize(400, 300)
         if self.video.state() == QMediaPlayer.PlayingState: self.video.pause()
         else: self.video.play()
 
@@ -533,15 +527,27 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         self.frame_w = frame_w
         self.frame_h = frame_h
 
-    def showimg(self, img, qimage, stats, currentFrame):
+    def handleLabel_Slider(self, sec):
+        self.durationLabel.clear()
+        self.durationLabel.setText(time.strftime("%M:%S", time.gmtime(sec)))
+        pass
+
+    def showimg(self, img, qimage, stats, currentFrame, playback):
+
+        if currentFrame % 24 == 0:
+            self.handleLabel_Slider(int(currentFrame/24))
+            self.videoSlider.setValue(int((currentFrame/24)*1000))
+
         self.currentFrame = currentFrame
         if img: self.detectedFrames.append(img)
         self.detectedStats.append(stats)
         self.removeAllItemsFromTable(self.statView)
         for i, row in enumerate(stats):
-            row = [str(i+1)] + row
+            if playback is False:
+                row = [str(i+1), row[0], str(int(row[1]*100))+"%", row[2], row[3], row[4], row[5]]
+            else: row = [str(i+1)] + row
             self.addItemToStats(self.statView, row)
-
+        
         pixmap = QPixmap(qimage)
         self.trainedVideoLabel.setPixmap(pixmap)
 
@@ -554,12 +560,10 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
     def stopVideo(self):
         try:
             if self.detecting is False:
-                self.videoSlider.setValue(0)
                 self.video.stop()
                 if self.playbackThread is not None: self.playbackThread.stop()
                 self.trainedVideoLabel.clear()
                 self.removeAllItemsFromTable(self.statView)
-                self.resetSlider()
             else:
                 QMessageBox.critical(self, "Error", "Detection in progress...", buttons=QMessageBox.Ok)
                 self.statusBar().showMessage('Status: Detection in progress')

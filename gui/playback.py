@@ -13,7 +13,7 @@ class PlayBack(QThread):
     Stop = False
     Pause = False
     doneSignal = pyqtSignal(str)
-    imageSignal = pyqtSignal(list, QImage, list, int)
+    imageSignal = pyqtSignal(list, QImage, list, int, bool)
     frameSignal = pyqtSignal(int, int)
     errorSignal = pyqtSignal(str)
 
@@ -69,7 +69,6 @@ class PlayBack(QThread):
                 objClass = expandedData[i][index]
                 confidence = float(expandedData[i + 1][index])
                 xMin = int(float(expandedData[i + 2][index]) * frame.shape[1])
-                print(xMin)
                 xMax = int(float(expandedData[i + 3][index]) * frame.shape[1])
                 yMin = int(float(expandedData[i + 4][index]) * frame.shape[0])
                 yMax = int(float(expandedData[i + 5][index]) * frame.shape[0])
@@ -104,8 +103,8 @@ class PlayBack(QThread):
                 qimage = self.convert_CVmatToQpixmap(image)
                 time.sleep(1/35)
                 if self.Stop == False:
-                    if csv is True: self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, i)
-                    else: self.imageSignal.emit(list(self.detectedFrames[i]), qimage, self.detectedStats[i], i)
+                    if csv is True: self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, i, True)
+                    else: self.imageSignal.emit(list(self.detectedFrames[i]), qimage, self.detectedStats[i], i, False)
                 i = i + 1
             i = 0
             self.doneSignal.emit("Video finished playingback")
@@ -119,4 +118,5 @@ class PlayBack(QThread):
     def stop(self):
         self.doneSignal.emit("Video finished playingback")
         self.Stop = True
+        self.Pause = False
         self.wait()

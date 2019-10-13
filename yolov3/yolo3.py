@@ -21,7 +21,7 @@ class YOLOv3(QThread):
 
     doneSignal = pyqtSignal(str, bool)
     frameSignal = pyqtSignal(int, int)
-    predictionSignal = pyqtSignal(list, QImage, list, int)
+    predictionSignal = pyqtSignal(list, QImage, list, int, bool)
 
     def __init__(self, videoPath):
         super().__init__()
@@ -49,6 +49,17 @@ class YOLOv3(QThread):
         qimg = QImage(CVmat.data, width, height, bytesPerLine, QImage.Format_RGB888)
         return qimg
 
+    def filterStats(self, stats, frame):
+        statisticsInFrme = []
+        for i, row in enumerate(stats):
+            xMin = str(int(row[2] * frame.shape[1]))
+            xMax = str(int(row[3] * frame.shape[1]))
+            yMin = str(int(row[4] * frame.shape[0]))
+            yMax = str(int(row[5] * frame.shape[0]))
+            row = [row[0],row[1],xMin,xMax,yMin,yMax]
+            statisticsInFrme.append(row)
+        return statisticsInFrme
+
     def yolo3_predict(self):        
         
         with open(self.config_path) as config_buffer:    
@@ -71,12 +82,15 @@ class YOLOv3(QThread):
             ##############################
             # ie. use result_image (w/ bounding boxes) or image (w/o bounding boxes)
             # ie. use self.count_lst to display class counts for current frame
+
+            filtered_stats = self.filterStats(frame_stats, image)
+
             qimg = self.convert_CVmatToQpixmap(result_image)
-            self.predictionSignal.emit(list(result_image), qimg, frame_stats, i)
+            self.predictionSignal.emit(list(result_image), qimg, filtered_stats, i, False)
             
             # Add new data to global
             self.bbox_images.append(result_image)
-            self.output_lst.append(frame_stats)
+            self.output_lst.append(filtered_stats)
             self.count_lst.append(counts)
 
         self.doneSignal.emit("YOLOv3 prediction is done", True)
@@ -136,7 +150,7 @@ class YOLOv3(QThread):
                 # Concatenate string
                 # image_str += str(labels[box.get_label()]) + " " +  str(box.get_score()) + " " \
                 #             + str(xmin) + " " + str(xmax) + " " + str(ymin) + " " + str(ymax) + " "
-                image_str = [str(labels[box.get_label()]),str(box.get_score()),str(xmin),str(xmax),str(ymin),str(ymax)]
+                image_str = [str(labels[box.get_label()]),box.get_score(),xmin,xmax,ymin,ymax]
                 stats.append(image_str)
                 #print(image_str)
                 
@@ -144,7 +158,6 @@ class YOLOv3(QThread):
             
         # draw bounding boxes on the image using labels
         draw_boxes(image, boxes, config['model']['labels'], obj_thresh)   
-                
         return stats, counts, image
 
     def save_video(self, images, input_path, output_path):
