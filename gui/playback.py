@@ -15,10 +15,13 @@ class PlayBack(QThread):
     doneSignal = pyqtSignal(str)
     imageSignal = pyqtSignal(list, QImage, list, int)
     frameSignal = pyqtSignal(int, int)
+    errorSignal = pyqtSignal(str)
 
-    def __init__(self, videoPath, csvPath):
+    def __init__(self, videoPath, csvPath, detectedStats, detectedFrames):
         super().__init__()
         self.csvPath = csvPath
+        self.detectedStats = detectedStats
+        self.detectedFrames = detectedFrames
         self.videoPath = videoPath
         self.threadactive = True
         self.video_reader = cv2.VideoCapture(r'{}'.format(videoPath))
@@ -30,8 +33,18 @@ class PlayBack(QThread):
 
     def run(self):
         self.frameSignal.emit(self.frame_w, self.frame_h)
-        self.readCSV()
-        self.start_playback()
+
+        if self.detectedStats: 
+            self.start_playback(False, len(self.detectedFrames))
+        elif self.csvPath: 
+                self.readCSV()
+                self.start_playback(True, self.nb_frames)
+
+    # def readStats(self):
+    #     for frame in self.detectedStats:
+    #         for i, obj in enumerate(frame):
+    #             print(obj[0])
+    #     pass
         
     def readCSV(self):
         self.labels = pd.read_csv(self.csvPath)
@@ -56,6 +69,7 @@ class PlayBack(QThread):
                 objClass = expandedData[i][index]
                 confidence = float(expandedData[i + 1][index])
                 xMin = int(float(expandedData[i + 2][index]) * frame.shape[1])
+                print(xMin)
                 xMax = int(float(expandedData[i + 3][index]) * frame.shape[1])
                 yMin = int(float(expandedData[i + 4][index]) * frame.shape[0])
                 yMax = int(float(expandedData[i + 5][index]) * frame.shape[0])
@@ -75,32 +89,32 @@ class PlayBack(QThread):
         qimg = QImage(CVmat.data, width, height, bytesPerLine, QImage.Format_RGB888)
         return qimg
 
-    def start_playback(self):
-    
-        print("Playback started...")
-        print("Total number of frames: {}".format(self.nb_frames))
-
-        print(self.videoPath)
-
-        i = 0
-        while (i < self.nb_frames and self.Stop is False):
-
-            while (self.Pause): pass
-            ret, frame = self.video_reader.read()
-            image = self.drawCsvAnnotations(self.labels, self.expLabels, i, frame)
-            qimage = self.convert_CVmatToQpixmap(image)
-            time.sleep(1/35)
-            if self.Stop == False:
-                self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, i)
-            i = i + 1
-        
-        i = 0
-
-        self.doneSignal.emit("Video finished playingback")
-        print("Detection done...")
-        # release resources
-        self.video_reader.release()
-        cv2.destroyAllWindows()
+    def start_playback(self, csv, nb_frames):
+        # try:
+            print("Playback started...")
+            print("Total number of frames: {}".format(nb_frames))
+            i = 0
+            while (i < nb_frames and self.Stop is False):
+                while (self.Pause): pass
+                if csv is True:
+                    ret, frame = self.video_reader.read()
+                    image = self.drawCsvAnnotations(self.labels, self.expLabels, i, frame)
+                else:
+                    image = np.array(self.detectedFrames[i])
+                qimage = self.convert_CVmatToQpixmap(image)
+                time.sleep(1/35)
+                if self.Stop == False:
+                    if csv is True: self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, i)
+                    else: self.imageSignal.emit(list(self.detectedFrames[i]), qimage, self.detectedStats[i], i)
+                i = i + 1
+            i = 0
+            self.doneSignal.emit("Video finished playingback")
+            print("Playback done...")
+            # release resources
+            self.video_reader.release()
+            cv2.destroyAllWindows()
+        # except Exception as e: 
+        #     self.errorSignal.emit("Invalid CSV data")
 
     def stop(self):
         self.doneSignal.emit("Video finished playingback")

@@ -90,7 +90,7 @@ p33
 F0.3
 sS'model_path'
 p34
-S'/model_frcnn.hdf5'
+S'model_frcnn.hdf5'
 p35
 sS'classifier_max_overlap'
 p36

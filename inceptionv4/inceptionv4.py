@@ -23,7 +23,7 @@ from PyQt5.QtGui import QImage
  
 class InceptionV4(QThread):
 
-    doneSignal = pyqtSignal(str)
+    doneSignal = pyqtSignal(str, bool)
     frameSignal = pyqtSignal(int, int)
     predictionSignal = pyqtSignal(list, QImage, list, int)
 
@@ -67,7 +67,8 @@ class InceptionV4(QThread):
             b_box.append(bbox_temp)
             self.predictionSignal.emit(list(frames_out), self.convert_CVmatToQpixmap(frames_out), b_box, i)
 
-        self.doneSignal.emit("InceptionV4 prediction is done")
+        self.doneSignal.emit("InceptionV4 prediction is done", True)
+        K.clear_session()
         return (frames_out,b_box)
 
         self.video_reader.release()

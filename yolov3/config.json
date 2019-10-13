@@ -9,7 +9,7 @@
   "train": {
     "train_image_folder": "D:/Nathan/Documents/QUT/Y4S2/EGH455/keras-yolo3-master/temp_image/",
     "train_annot_folder": "D:/Nathan/Documents/QUT/Y4S2/EGH455/keras-yolo3-master/temp_annot/",
-    "cache_name": "/egh455.pkl",
+    "cache_name": "egh455.pkl",
 
     "train_times": 1,
     "batch_size": 16,
@@ -26,7 +26,7 @@
     "class_scale": 1,
 
     "tensorboard_dir": "logs",
-    "saved_weights_name": "/egh455.h5",
+    "saved_weights_name": "egh455.h5",
     "debug": true
   },
 

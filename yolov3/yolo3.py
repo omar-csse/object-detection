@@ -11,6 +11,7 @@ import time
 import os
 from tqdm import tqdm
 from keras.models import load_model
+from keras import backend as K
 from .utils.utils import get_yolo_boxes
 from .utils.bbox import draw_boxes
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
@@ -18,7 +19,7 @@ from PyQt5.QtGui import QImage
 
 class YOLOv3(QThread):
 
-    doneSignal = pyqtSignal(str)
+    doneSignal = pyqtSignal(str, bool)
     frameSignal = pyqtSignal(int, int)
     predictionSignal = pyqtSignal(list, QImage, list, int)
 
@@ -28,7 +29,7 @@ class YOLOv3(QThread):
         self.output_lst = []
         self.count_lst =[]
         self.bbox_images = []
-        self.config_path  = os.path.dirname(os.path.realpath(__file__)) + "/config.json"
+        self.config_path  = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.json")
         
         self.video_reader = cv2.VideoCapture(self.input_path)
         self.nb_frames = int(self.video_reader.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -57,7 +58,7 @@ class YOLOv3(QThread):
         #   Load the model
         ###############################
         os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
-        infer_model = load_model(os.path.dirname(os.path.realpath(__file__)) + config['train']['saved_weights_name'])
+        infer_model = load_model(os.path.join(os.path.dirname(os.path.realpath(__file__)), config['train']['saved_weights_name']))
         
         for i in tqdm(range(self.nb_frames)):
             _, image = self.video_reader.read()
@@ -78,7 +79,8 @@ class YOLOv3(QThread):
             self.output_lst.append(frame_stats)
             self.count_lst.append(counts)
 
-        self.doneSignal.emit("YOLOv3 prediction is done")
+        self.doneSignal.emit("YOLOv3 prediction is done", True)
+        K.clear_session()
         self.video_reader.release() 
         
         return self.bbox_images, self.output_lst, self.count_lst

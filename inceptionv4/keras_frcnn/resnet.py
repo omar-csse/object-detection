@@ -13,8 +13,8 @@ from keras.layers import Input, Add, Dense, Activation, Flatten, Convolution2D, 
 
 from keras import backend as K
 
-from .RoiPoolingConv import RoiPoolingConv
-from .FixedBatchNormalization import FixedBatchNormalization
+from keras_frcnn.RoiPoolingConv import RoiPoolingConv
+from keras_frcnn.FixedBatchNormalization import FixedBatchNormalization
 
 def get_weight_path():
     if K.image_dim_ordering() == 'th':
