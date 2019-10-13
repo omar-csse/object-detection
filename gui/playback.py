@@ -59,7 +59,6 @@ class PlayBack(QThread):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         for index, row in item.iterrows():
             for i in range(0, expandedData.shape[1], 6):
-                print(expandedData[i][index])
                 if expandedData[i][index] == None or not expandedData[i][index] or pd.isnull(expandedData[i][index]):
                     break # it breaks the loop if there are no more objects to draw
                 colour = self.colours[self.classes.index(expandedData[i][index])]

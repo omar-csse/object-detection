@@ -15,7 +15,7 @@ from keras_frcnn import roi_helpers
 
 sys.setrecursionlimit(40000)
 
-config_output_filename = os.path.dirname(os.path.realpath(__file__)) + "/config.pickle"
+config_output_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.pickle")
 
 with open(config_output_filename, 'rb') as f_in:
 	C = pickle.load(f_in)
@@ -219,8 +219,8 @@ model_classifier_only = Model([feature_map_input, roi_input], classifier)
 model_classifier = Model([feature_map_input, roi_input], classifier)
 
 print('Loading weights from {}'.format(C.model_path))
-model_rpn.load_weights(os.path.dirname(os.path.realpath(__file__)) + C.model_path, by_name=True)
-model_classifier.load_weights(os.path.dirname(os.path.realpath(__file__)) + C.model_path, by_name=True)
+model_rpn.load_weights(os.path.join(os.path.dirname(os.path.realpath(__file__)), C.model_path), by_name=True)
+model_classifier.load_weights(os.path.join(os.path.dirname(os.path.realpath(__file__)), C.model_path), by_name=True)
 
 model_rpn.compile(optimizer='sgd', loss='mse')
 model_classifier.compile(optimizer='sgd', loss='mse')
