@@ -70,7 +70,6 @@ class App(QMainWindow):
 
         mainWidget = QWidget(self)
         self.setCentralWidget(mainWidget)
-        self.setFixedSize(900, 650)
 
         self.buttonsWidget1 = QWidget()
         self.buttonsWidget1Layout = QHBoxLayout(self.buttonsWidget1)
@@ -129,13 +128,11 @@ class App(QMainWindow):
         
         # Video
         self.videoWidget = QVideoWidget()
-        self.videoWidget.setMaximumSize(400, 300)
         self.video = self.setupVideo(self.videoWidget)
         self.currentVideoState = self.video.state()
 
         # Pixmap label
         self.trainedVideoLabel = QLabel()
-        self.trainedVideoLabel.setMaximumSize(400, 225)
         self.trainedVideoLabel.setScaledContents(True)
 
         self.video.durationChanged.connect(self.durationChanged)
@@ -260,8 +257,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         tableWidget.setColumnCount(len(headers.split()))
         tableWidget.setHorizontalHeaderLabels(headers.split())
         tableWidget.verticalHeader().setVisible(isVisible)
-        if height: tableWidget.setFixedHeight(height)
-        if minHeight: tableWidget.setMinimumHeight(minHeight)
         return tableWidget
 
     @staticmethod
