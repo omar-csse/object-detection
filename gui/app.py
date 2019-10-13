@@ -576,11 +576,19 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
     def setObjLabel(self, label, object_type, num):
         label.setText("Total {}:  {}".format(object_type, num))
 
-    # def nextFrame(self):
-    #     a
+    def nextFrame(self):
+        if self.detecting is False:
+            if self.importedVideoPath is not None and (self.importedCSVPath is not None or self.detectedStats):
+                if self.playbackThread.isRunning():
+                    self.video.pause()
+                    self.playbackThread.nextFrame()
 
-    # def prevFrame(self):
-    #     a
+    def prevFrame(self):
+        if self.detecting is False:
+            if self.importedVideoPath is not None and (self.importedCSVPath is not None or self.detectedStats):
+                if self.playbackThread.isRunning():
+                    self.video.pause()
+                    self.playbackThread.prevFrame()
 
     def stopVideo(self):
         try:
@@ -615,3 +623,5 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_P: self.processData()
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_S: self.saveVideo()
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_E: self.exportCSV()
+        elif event.key() == Qt.Key_Right: self.nextFrame()
+        elif event.key() == Qt.Key_Left: self.prevFrame()

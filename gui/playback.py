@@ -35,10 +35,12 @@ class PlayBack(QThread):
         self.frameSignal.emit(self.frame_w, self.frame_h)
 
         if self.detectedStats: 
-            self.start_playback(False, len(self.detectedFrames))
+            self.csv = False
+            self.start_playback(self.csv, len(self.detectedFrames))
         elif self.csvPath:
+            self.csv = True
             self.readCSV()
-            self.start_playback(True, self.nb_frames)
+            self.start_playback(self.csv, self.nb_frames)
 
     def readCSV(self):
         self.labels = pd.read_csv(self.csvPath)
@@ -86,21 +88,21 @@ class PlayBack(QThread):
         try:
             print("Playback started...")
             print("Total number of frames: {}".format(nb_frames))
-            i = 0
-            while (i < nb_frames and self.Stop is False):
+            self.i = 0
+            while (self.i < nb_frames and self.Stop is False):
                 while (self.Pause): pass
                 if csv is True:
                     ret, frame = self.video_reader.read()
-                    image = self.drawCsvAnnotations(self.labels, self.expLabels, i, frame)
+                    image = self.drawCsvAnnotations(self.labels, self.expLabels, self.i, frame)
                 else:
-                    image = np.array(self.detectedFrames[i])
+                    image = np.array(self.detectedFrames[self.i])
                 qimage = self.convert_CVmatToQpixmap(image)
                 time.sleep(1/35)
                 if self.Stop == False:
-                    if csv is True: self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, i, True)
-                    else: self.imageSignal.emit(list(self.detectedFrames[i]), qimage, self.detectedStats[i], i, False)
-                i = i + 1
-            i = 0
+                    if csv is True: self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, self.i, True)
+                    else: self.imageSignal.emit(list(self.detectedFrames[self.i]), qimage, self.detectedStats[self.i], self.i, False)
+                self.i = self.i + 1
+            self.i = 0
             self.doneSignal.emit("Video finished playingback")
             print("Playback done...")
             # release resources
@@ -114,3 +116,27 @@ class PlayBack(QThread):
         self.Stop = True
         self.Pause = False
         self.wait()
+
+    def single_frame(self, csv, i):
+        if csv is True:
+            ret, frame = self.video_reader.read()
+            image = self.drawCsvAnnotations(self.labels, self.expLabels, self.i, frame)
+        else:
+            image = np.array(self.detectedFrames[self.i])
+        qimage = self.convert_CVmatToQpixmap(image)
+        if self.Stop == False:
+            if csv is True: 
+                self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, self.i, True)
+            else: self.imageSignal.emit(list(self.detectedFrames[self.i]), qimage, self.detectedStats[self.i], self.i, False)
+
+    def nextFrame(self):
+        self.i = self.i + 1
+        if self.i > self.nb_frames: self.i = self.nb_frames - 1
+        self.Pause = True
+        self.single_frame(self.csv, self.i)
+
+    def prevFrame(self):
+        self.i = self.i - 1
+        if self.i < 0: self.i = 0
+        self.Pause = True
+        self.single_frame(self.csv, self.i)
