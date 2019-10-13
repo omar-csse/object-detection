@@ -40,12 +40,6 @@ class PlayBack(QThread):
                 self.readCSV()
                 self.start_playback(True, self.nb_frames)
 
-    # def readStats(self):
-    #     for frame in self.detectedStats:
-    #         for i, obj in enumerate(frame):
-    #             print(obj[0])
-    #     pass
-        
     def readCSV(self):
         self.labels = pd.read_csv(self.csvPath)
         self.expLabels = self.labels['PredictionString'].str.split(' ', expand=True)
@@ -89,7 +83,7 @@ class PlayBack(QThread):
         return qimg
 
     def start_playback(self, csv, nb_frames):
-        # try:
+        try:
             print("Playback started...")
             print("Total number of frames: {}".format(nb_frames))
             i = 0
@@ -112,8 +106,8 @@ class PlayBack(QThread):
             # release resources
             self.video_reader.release()
             cv2.destroyAllWindows()
-        # except Exception as e: 
-        #     self.errorSignal.emit("Invalid CSV data")
+        except Exception as e: 
+            self.errorSignal.emit("Invalid CSV data")
 
     def stop(self):
         self.doneSignal.emit("Video finished playingback")

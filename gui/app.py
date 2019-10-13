@@ -46,11 +46,7 @@ class App(QMainWindow):
         self.saveVideoThread = None
         self.yolov3Thread = None
         self.inceptionv4Thread = None
-
-        self.playbackThreadCreated = False
-        self.saveVideoThreadCreated = False
-        self.yolov3ThreadCreated = False
-        self.inceptionv4ThreadCreated = False
+        self.exportCSVThread = None
 
         self.labels = None
         self.classes = []
@@ -347,12 +343,13 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
                 self.statusBar().showMessage('Status: Video is running')
             else:
                 if self.detecting is False:
-                    if self.getDLM() == 0:
+                    indx, txt = self.getDLM()
+                    if indx == 0:
                         self.yolov3ThreadInvoke()
-                    elif self.getDLM() == 1:
+                    elif indx == 1:
                         self.inceptionv4ThreadInvoke()
-                    print("train in {} algorithm".format(self.getDLM()))
-                    self.statusBar().showMessage('Status: Processing data in {}'.format(self.getDLM()))
+                    print("train in {} algorithm".format(txt))
+                    self.statusBar().showMessage('Status: Processing data in {}'.format(txt))
                 else:
                     QMessageBox.critical(self, "Error", "Detection in progress...", buttons=QMessageBox.Ok)
                     self.statusBar().showMessage('Status: Detection in progress')
@@ -423,12 +420,14 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
             if self.canSaveVideo:
                 if self.saveVideoThread is None:
                     self.saveVideoThread = SaveVideo(videopath, self.detectedFrames, self.frame_w, self.frame_h)
-                    self.saveVideoThread.doneSignal.connect(self.videoSaved)
+                    self.saveVideoThread.doneSignal.connect(self.dataSaved)
+                    self.saveVideoThread.errorSignal.connect(self.errorMsg)
                     self.saveVideoThread.start()
                     self.saveVideoThread.Pause = True
                 elif self.saveVideoThread.isFinished():
                     self.saveVideoThread = SaveVideo(videopath, self.detectedFrames, self.frame_w, self.frame_h)
-                    self.saveVideoThread.doneSignal.connect(self.videoSaved)
+                    self.saveVideoThread.doneSignal.connect(self.dataSaved)
+                    self.saveVideoThread.errorSignal.connect(self.errorMsg)
                     self.saveVideoThread.start()
             else: 
                 QMessageBox.critical(self, "Error", "Video is still running", buttons=QMessageBox.Ok)
@@ -436,20 +435,28 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
             logging.error(traceback.format_exc())
             QMessageBox.critical(self, "Error", "No available frames", buttons=QMessageBox.Ok)
 
-    def videoSaved(self):
-        self.statusBar().showMessage('Status: Video saved')
+    def dataSaved(self, msg):
+        self.statusBar().showMessage(msg)
 
     def exportCSV(self):
-        print("csv file will be exported")
-        if not self.statistics:
-            QMessageBox.critical(self, "Error", "No statistics available", buttons=QMessageBox.Ok)
-        else:
-            with open("{}.csv".format(self.importedVideo), 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow(['File', 'PredictionString'])
-                for i in range(len(self.statistics)):
-                    writer.writerow(self.statistics[i])
-                    self.statusBar().showMessage('Status: statistics exported')
+        try:
+            if self.canSaveVideo:
+                if self.exportCSVThread is None:
+                    self.exportCSVThread = ExportCSV(self.importedVideo, self.detectedStats, self.frame_w, self.frame_h)
+                    self.exportCSVThread.doneSignal.connect(self.dataSaved)
+                    self.exportCSVThread.errorSignal.connect(self.errorMsg)
+                    self.exportCSVThread.start()
+                elif self.exportCSVThread.isFinished():
+                    self.exportCSVThread = ExportCSV(self.importedVideo, self.detectedStats, self.frame_w, self.frame_h)
+                    self.exportCSVThread.doneSignal.connect(self.dataSaved)
+                    self.exportCSVThread.errorSignal.connect(self.errorMsg)
+                    self.exportCSVThread.start()
+            else:
+                QMessageBox.critical(self, "Error", "No statistics available", buttons=QMessageBox.Ok)
+        except Exception as e: 
+            logging.error(traceback.format_exc())
+            QMessageBox.critical(self, "Error", "Unable to export statistics", buttons=QMessageBox.Ok)
+            
 
     @staticmethod
     def setupVideo(videoWidget):
@@ -492,6 +499,7 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
                         self.playbackThread.imageSignal.connect(self.showimg)
                         self.playbackThread.frameSignal.connect(self.setFrame_h_w)
                         self.playbackThread.doneSignal.connect(self.threadDone)
+                        self.playbackThread.errorSignal.connect(self.errorMsg)
                         self.playLoadedVideo()
                         self.clearStats()
                         self.playbackThread.start()
@@ -523,7 +531,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         else: self.video.play()
 
     def setFrame_h_w(self, frame_w, frame_h):
-        self.statusBar().showMessage('Status: playing back')
         self.frame_w = frame_w
         self.frame_h = frame_h
 
@@ -577,7 +584,7 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
             self.resetSlider()
 
     def getDLM(self):
-        return self.dlmOptions.currentIndex()
+        return self.dlmOptions.currentIndex(), self.dlmOptions.currentText()
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Space:
