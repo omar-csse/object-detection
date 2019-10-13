@@ -541,6 +541,10 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
 
     def showimg(self, img, qimage, stats, currentFrame, playback):
 
+        self.totalDolphins = 0
+        self.totalSharks = 0
+        self.totalSurfers = 0
+        
         if currentFrame % 24 == 0:
             self.handleLabel_Slider(int(currentFrame/24))
             self.videoSlider.setValue(int((currentFrame/24)*1000))
@@ -550,13 +554,27 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         self.detectedStats.append(stats)
         self.removeAllItemsFromTable(self.statView)
         for i, row in enumerate(stats):
-            if playback is False:
-                row = [str(i+1), row[0], str(int(row[1]*100))+"%", row[2], row[3], row[4], row[5]]
-            else: row = [str(i+1)] + row
+
+            if row[0] == 'dolphin': self.totalDolphins += 1
+            elif row[0] == 'shark': self.totalSharks += 1
+            elif row[0] == 'surfer': self.totalSurfers += 1
+            try:
+                if playback is False:
+                    row = [str(i+1), row[0], str(int(row[1]*100))+"%", row[2], row[3], row[4], row[5]]
+                else: row = [str(i+1)] + row
+            except Exception as e: 
+                row = [str(i+1)] + row
             self.addItemToStats(self.statView, row)
+        
+        self.setObjLabel(self.dolphinsLabel, "dolphins", self.totalDolphins)
+        self.setObjLabel(self.sharksLabel, "sharks", self.totalSharks)
+        self.setObjLabel(self.surfersLabel, "surfers", self.totalSurfers)
         
         pixmap = QPixmap(qimage)
         self.trainedVideoLabel.setPixmap(pixmap)
+    
+    def setObjLabel(self, label, object_type, num):
+        label.setText("Total {}:  {}".format(object_type, num))
 
     # def nextFrame(self):
     #     a

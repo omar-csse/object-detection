@@ -36,9 +36,9 @@ class PlayBack(QThread):
 
         if self.detectedStats: 
             self.start_playback(False, len(self.detectedFrames))
-        elif self.csvPath: 
-                self.readCSV()
-                self.start_playback(True, self.nb_frames)
+        elif self.csvPath:
+            self.readCSV()
+            self.start_playback(True, self.nb_frames)
 
     def readCSV(self):
         self.labels = pd.read_csv(self.csvPath)

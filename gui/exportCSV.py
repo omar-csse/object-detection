@@ -30,11 +30,11 @@ class ExportCSV(QThread):
                     self.img_string = ""
                     if row:
                         for n, fram_stat in enumerate(row):
-                            conf = "{0:.2f} ".format(fram_stat[1])
-                            xMin = "{0:.2f} ".format(int(fram_stat[2]) / self.frame_w)
-                            xMax = "{0:.2f} ".format(int(fram_stat[3]) / self.frame_w)
-                            yMin = "{0:.2f} ".format(int(fram_stat[4]) / self.frame_h)
-                            yMax = "{0:.2f} ".format(int(fram_stat[5]) / self.frame_h)
+                            conf = "{0:.2f} ".format(float(fram_stat[1]))
+                            xMin = "{0:.2f} ".format(float(int(fram_stat[2]) / self.frame_w))
+                            xMax = "{0:.2f} ".format(float(int(fram_stat[3]) / self.frame_w))
+                            yMin = "{0:.2f} ".format(float(int(fram_stat[4]) / self.frame_h))
+                            yMax = "{0:.2f} ".format(float(int(fram_stat[5]) / self.frame_h))
                             self.img_string += str(fram_stat[0]) + " " + conf + xMin + xMax + yMin + yMax
 
                     self.csvrows.append([i, self.img_string])
