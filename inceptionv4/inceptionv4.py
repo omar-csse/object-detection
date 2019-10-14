@@ -66,14 +66,8 @@ class InceptionV4(QThread):
             frames_out.append(frame)
             b_box.append(bbox_temp)
             self.predictionSignal.emit(list(frames_out), self.convert_CVmatToQpixmap(frames_out), b_box, i, False)
-
         self.doneSignal.emit("InceptionV4 prediction is done", True)
         K.clear_session()
         return (frames_out,b_box)
 
         self.video_reader.release()
-	
-	
-		
-
-

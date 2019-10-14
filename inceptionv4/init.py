@@ -7,28 +7,24 @@ import sys
 import pickle
 from optparse import OptionParser
 import time
-from keras_frcnn import config
+from .keras_frcnn import config
 from keras import backend as K
 from keras.layers import Input
 from keras.models import Model
-from keras_frcnn import roi_helpers
+from .keras_frcnn import roi_helpers
 
-sys.setrecursionlimit(40000)
+import tensorflow as tf
+graph = tf.get_default_graph()
 
 config_output_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.pickle")
-
+print(config_output_filename)
 with open(config_output_filename, 'rb') as f_in:
 	C = pickle.load(f_in)
 
 if C.network == 'resnet50':
-	import keras_frcnn.resnet as nn
+	from .keras_frcnn import resnet as nn
 elif C.network == 'vgg':
-	import keras_frcnn.vgg as nn
-
-print(C.network)
-print(C.network)
-print(C.network)
-print(C.network)
+    from .keras_frcnn import vgg as nn
 
 # turn off any data augmentation at test time
 C.use_horizontal_flips = False
@@ -115,7 +111,7 @@ def predict(idx,img):
 			ROIs_padded[0, curr_shape[1]:, :] = ROIs[0, 0, :]
 			ROIs = ROIs_padded
 
-		[P_cls, P_regr] = model_classifier.predict([F, ROIs])
+		[P_cls, P_regr] = model_classifier_only.predict([F, ROIs])
 
 		for ii in range(P_cls.shape[1]):
 
@@ -166,14 +162,11 @@ def predict(idx,img):
 			cv2.rectangle(img, (textOrg[0] - 5, textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (0, 0, 0), 2)
 			cv2.rectangle(img, (textOrg[0] - 5,textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (255, 255, 255), -1)
 			cv2.putText(img, textLabel, textOrg, cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 1)
-			b_box.append([idx, key, real_x1, real_x2, real_y1, real_y2])
+			b_box.append([idx,real_x1, real_y1, real_x2, real_y2,key])
 
 	print('Elapsed time = {}'.format(time.time() - st))
 	print(all_dets)
-	return(img, b_box)
-
-def getModels():
-    return model_rpn, model_classifier
+	return(img,b_box)
 
 	
 class_mapping = C.class_mapping
@@ -213,7 +206,6 @@ rpn_layers = nn.rpn(shared_layers, num_anchors)
 classifier = nn.classifier(feature_map_input, roi_input, C.num_rois, nb_classes=len(class_mapping), trainable=True)
 
 model_rpn = Model(img_input, rpn_layers)
-
 model_classifier_only = Model([feature_map_input, roi_input], classifier)
 
 model_classifier = Model([feature_map_input, roi_input], classifier)
@@ -232,3 +224,10 @@ classes = {}
 bbox_threshold = 0.9
 
 visualise = True
+
+#imgin= cv2.imread('/media/jiajun/share/dataset/egh455/test/dolphin151.png')
+#idx=int(1)
+#(imgout,bbox) = predict(1,imgin)
+#cv2.imshow('img', imgout)
+#cv2.waitKey(0)
+

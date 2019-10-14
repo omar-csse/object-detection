@@ -97,7 +97,7 @@ class PlayBack(QThread):
                 else:
                     image = np.array(self.detectedFrames[self.i])
                 qimage = self.convert_CVmatToQpixmap(image)
-                time.sleep(1/35)
+                time.sleep(1/24)
                 if self.Stop == False:
                     if csv is True: self.imageSignal.emit(list(image), qimage, self.statisticsInFrme, self.i, True)
                     else: self.imageSignal.emit(list(self.detectedFrames[self.i]), qimage, self.detectedStats[self.i], self.i, False)

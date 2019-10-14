@@ -25,7 +25,6 @@ from gui.exportCSV import ExportCSV
 from gui.playback import PlayBack
 from gui.saveVideo import SaveVideo
 from yolov3.yolo3 import YOLOv3
-# from inceptionv4.inceptionv4 import InceptionV4
 
 
 class App(QMainWindow):
@@ -70,6 +69,7 @@ class App(QMainWindow):
 
         mainWidget = QWidget(self)
         self.setCentralWidget(mainWidget)
+        self.setFixedSize(800, 600)
 
         self.buttonsWidget1 = QWidget()
         self.buttonsWidget1Layout = QHBoxLayout(self.buttonsWidget1)
@@ -342,7 +342,7 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
                     if indx == 0:
                         self.yolov3ThreadInvoke()
                     elif indx == 1:
-                        self.inceptionv4ThreadInvoke()
+                        pass
                     print("train in {} algorithm".format(txt))
                     self.statusBar().showMessage('Status: Processing data in {}'.format(txt))
                 else:
@@ -352,22 +352,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
             QMessageBox.critical(self, "Error", "Select a file from explorer", buttons=QMessageBox.Ok)
         except (NameError):
             QMessageBox.critical(self, "Error", "Current model is not available", buttons=QMessageBox.Ok)
-
-    def inceptionv4ThreadInvoke(self):
-        if self.inceptionv4Thread is None:
-            self.detectionStarted()
-            self.inceptionv4Thread = InceptionV4(self.importedVideoPath.toString())
-            self.inceptionv4Thread.doneSignal.connect(self.inceptionv4threadDone)
-            self.inceptionv4Thread.predictionSignal.connect(self.showimg)
-            self.inceptionv4Thread.frameSignal.connect(self.setFrame_h_w)
-            self.inceptionv4Thread.start()
-        elif self.inceptionv4Thread.isFinished():
-            self.detectionStarted()
-            self.inceptionv4Thread = InceptionV4(self.importedVideoPath.toString())
-            self.inceptionv4Thread.doneSignal.connect(self.inceptionv4threadDone)
-            self.inceptionv4Thread.predictionSignal.connect(self.showimg)
-            self.inceptionv4Thread.frameSignal.connect(self.setFrame_h_w)
-            self.inceptionv4Thread.start()
 
     def yolov3ThreadInvoke(self):
         if self.yolov3Thread is None:
@@ -396,7 +380,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
 
     def yolov3threadDone(self, msg, dlm):
         self.threadDone(msg, dlm)
-        self.yolov3Thread.terminate()
 
     def threadDone(self, msg, dlm=False):
         self.canSaveVideo = True
