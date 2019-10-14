@@ -376,7 +376,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
 
     def inceptionv4threadDone(self, msg, dlm):
         self.threadDone(msg, dlm)
-        self.inceptionv4Thread.terminate()
 
     def yolov3threadDone(self, msg, dlm):
         self.threadDone(msg, dlm)
