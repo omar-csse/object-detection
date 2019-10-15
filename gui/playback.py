@@ -13,7 +13,7 @@ class PlayBack(QThread):
     Stop = False
     Pause = False
     doneSignal = pyqtSignal(str)
-    imageSignal = pyqtSignal(QImage, list, QImage, list, int, bool)
+    imageSignal = pyqtSignal(QImage,list, QImage, list, int, bool)
     frameSignal = pyqtSignal(int, int)
     errorSignal = pyqtSignal(str)
 
@@ -24,13 +24,13 @@ class PlayBack(QThread):
         self.detectedFrames = detectedFrames
         self.videoPath = videoPath
         self.threadactive = True
-        self.frames = []
         self.video_reader = cv2.VideoCapture(r'{}'.format(videoPath))
         self.nb_frames = int(self.video_reader.get(cv2.CAP_PROP_FRAME_COUNT))
         self.frame_h = int(self.video_reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.frame_w = int(self.video_reader.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.classes = []
         self.statisticsInFrme = []
+        self.frames = []
 
     def run(self):
         self.frameSignal.emit(self.frame_w, self.frame_h)
@@ -69,7 +69,7 @@ class PlayBack(QThread):
                 xMax = int(float(expandedData[i + 3][index]) * frame.shape[1])
                 yMin = int(float(expandedData[i + 4][index]) * frame.shape[0])
                 yMax = int(float(expandedData[i + 5][index]) * frame.shape[0])
-                cv2.rectangle(frame,(xMin, yMin),(xMax, yMax),colour,7)
+                cv2.rectangle(frame,(xMin, yMin),(xMax, yMax),colour, 8)
                 st_row = [objClass, str(confidence), str(xMin), str(xMax), str(yMin), str(yMax)]
                 self.statisticsInFrme.append(st_row)
                 y = yMin - 25 if yMin - 25 > 25 else yMin + 25
@@ -94,17 +94,18 @@ class PlayBack(QThread):
             while (self.i < nb_frames and self.Stop is False):
                 while (self.Pause): pass
                 ret, frame = self.video_reader.read()
-                self.frames.append(frame)
-                if csv is True:
-                    image = self.drawCsvAnnotations(self.labels, self.expLabels, self.i, frame)
-                else:
-                    image = np.array(self.detectedFrames[self.i])
-                img = self.convert_CVmatToQpixmap(frame, True)
-                qimage = self.convert_CVmatToQpixmap(image, False)
-                time.sleep(1/15)
-                if self.Stop == False:
-                    if csv is True: self.imageSignal.emit(img, list(image), qimage, self.statisticsInFrme, self.i, True)
-                    else: self.imageSignal.emit(qimage, list(self.detectedFrames[self.i]), qimage, self.detectedStats[self.i], self.i, False)
+                if frame is not None:
+                    self.frames.append(frame)
+                    if csv is True:
+                        image = self.drawCsvAnnotations(self.labels, self.expLabels, self.i, frame)
+                    else:
+                        image = np.array(self.detectedFrames[self.i])
+                    img = self.convert_CVmatToQpixmap(frame, True)
+                    qimage = self.convert_CVmatToQpixmap(image, False)
+                    time.sleep(1/30)
+                    if self.Stop == False:
+                        if csv is True: self.imageSignal.emit(img, list(image), qimage, self.statisticsInFrme, self.i, True)
+                        else: self.imageSignal.emit(qimage, list(self.detectedFrames[self.i]), qimage, self.detectedStats[self.i], self.i, False)
                 self.i = self.i + 1
             self.i = 0
             self.doneSignal.emit("Video finished playingback")
