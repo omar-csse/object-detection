@@ -123,8 +123,6 @@ class PlayBack(QThread):
 
     def single_frame(self, csv, i, isnext):
         if csv is True:
-            print("i: " + str(i))
-            print("lng: " + str(len(self.frames)))
             if isnext:
                 _, frame = self.video_reader.read()
                 self.frames.append(frame)

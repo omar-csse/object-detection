@@ -23,7 +23,6 @@ class SaveVideo(QThread):
     def saveVideo(self):
         try:
             for i, frame in enumerate(self.detectedFrames):
-                print(i)
                 frame = cv2.cvtColor(np.float32(frame), cv2.COLOR_RGB2BGR)
                 self.video_writer.write(np.uint8(frame))
             self.video_writer.release()
