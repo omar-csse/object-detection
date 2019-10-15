@@ -21,7 +21,7 @@ class YOLOv3(QThread):
 
     doneSignal = pyqtSignal(str, bool)
     frameSignal = pyqtSignal(int, int)
-    predictionSignal = pyqtSignal(list, QImage, list, int, bool)
+    predictionSignal = pyqtSignal(QImage, list, QImage, list, int, bool)
 
     def __init__(self, videoPath):
         super().__init__()
@@ -73,7 +73,7 @@ class YOLOv3(QThread):
         
         for i in tqdm(range(self.nb_frames)):
             _, image = self.video_reader.read()
-                    
+            previmg = self.convert_CVmatToQpixmap(image)
             frame_stats, counts, result_image = self.frame_predict(config, infer_model, image)
             print("Frame analysed")
             
@@ -84,9 +84,8 @@ class YOLOv3(QThread):
             # ie. use self.count_lst to display class counts for current frame
 
             filtered_stats = self.filterStats(frame_stats, image)
-
             qimg = self.convert_CVmatToQpixmap(result_image)
-            self.predictionSignal.emit(list(result_image), qimg, filtered_stats, i, False)
+            self.predictionSignal.emit(previmg, list(result_image), qimg, filtered_stats, i, False)
             
             # Add new data to global
             self.bbox_images.append(result_image)

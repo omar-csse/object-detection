@@ -125,18 +125,15 @@ class App(QMainWindow):
         self.spaceLabel = QLabel("                       ", self)
         self.inputLabel = QLabel("Input Video/Image", self)
         self.playerLabel = QLabel("Player", self)
-        
-        # Video
-        self.videoWidget = QVideoWidget()
-        self.video = self.setupVideo(self.videoWidget)
-        self.currentVideoState = self.video.state()
 
         # Pixmap label
-        self.trainedVideoLabel = QLabel()
-        self.trainedVideoLabel.setScaledContents(True)
+        self.videoLabel = QLabel()
+        self.videoLabel.setMaximumHeight(0.3 * self.height())
+        self.videoLabel.setScaledContents(True)
 
-        self.video.durationChanged.connect(self.durationChanged)
-        self.video.stateChanged.connect(self.resetVideo)
+        self.trainedVideoLabel = QLabel()
+        self.trainedVideoLabel.setMaximumHeight(0.4 * self.height())
+        self.trainedVideoLabel.setScaledContents(True)
 
         self.videoBtnsWidget = QWidget()
         self.videoBtnsWidgetLayout = QHBoxLayout(self.videoBtnsWidget)
@@ -179,7 +176,7 @@ class App(QMainWindow):
         mainLayout.addWidget(self.buttonsWidget2, 15, 0)
         mainLayout.addWidget(self.spaceLabel, 0, 1)
         mainLayout.addWidget(self.inputLabel, 0, 2)
-        mainLayout.addWidget(self.videoWidget, 1, 2, 5, 1)
+        mainLayout.addWidget(self.videoLabel, 1, 2, 5, 1)
         mainLayout.addWidget(self.playerLabel, 8, 2)
         mainLayout.addWidget(self.spaceLabel, 9, 2)
         mainLayout.addWidget(self.trainedVideoLabel, 10, 2, 5, 1)
@@ -295,8 +292,11 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
                 if (isVideo):
                     self.removeItemFromTable("video")
                     self.importedVideoPath = QUrl.fromLocalFile(fileName)
-                    self.setMedia(self.importedVideoPath)
                     self.importedVideo = info.baseName()
+                    cap = cv2.VideoCapture(r'{}'.format(self.importedVideoPath.toString()))
+                    fps = cap.get(cv2.CAP_PROP_FPS)      # OpenCV2 version 2 used "CV_CAP_PROP_FPS"
+                    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+                    self.durationChanged(int(frame_count / fps))
                     self.statusBar().showMessage('Status: Video/Image added')
                 else:
                     self.removeItemFromTable("csv")
@@ -325,10 +325,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
             self.importedCSVPath = path
         except:
             QMessageBox.critical(self, "Error", "Invalid CSV file", buttons=QMessageBox.Ok)
-
-    def setMedia(self, path):
-        content = QMediaContent(path)
-        self.video.setMedia(content)
 
     def processData(self):
         try:
@@ -384,6 +380,7 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         self.canSaveVideo = True
         self.playingback = False
         if dlm: self.detecting = False
+        self.videoLabel.clear()
         self.trainedVideoLabel.clear()
         self.removeAllItemsFromTable(self.statView)
         self.statusBar().showMessage("Status: " + msg)
@@ -400,7 +397,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
                     self.saveVideoThread.doneSignal.connect(self.dataSaved)
                     self.saveVideoThread.errorSignal.connect(self.errorMsg)
                     self.saveVideoThread.start()
-                    self.saveVideoThread.Pause = True
                 elif self.saveVideoThread.isFinished():
                     self.saveVideoThread = SaveVideo(videopath, self.detectedFrames, self.frame_w, self.frame_h)
                     self.saveVideoThread.doneSignal.connect(self.dataSaved)
@@ -433,26 +429,16 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         except Exception as e: 
             logging.error(traceback.format_exc())
             QMessageBox.critical(self, "Error", "Unable to export statistics", buttons=QMessageBox.Ok)
-            
-
-    @staticmethod
-    def setupVideo(videoWidget):
-        video = QMediaPlayer(None, QMediaPlayer.StreamPlayback)
-        video.setVideoOutput(videoWidget)
-        video.setNotifyInterval(1)
-        return video
 
     def positionChanged(self, position):
         self.videoSlider.setValue(position)
-
-    def setPosition(self, position):
-        self.video.setPosition(position)
 
     def resetSlider(self):
         self.videoSlider.setValue(0)
 
     def durationChanged(self, duration):
-        self.videoSlider.setRange(0, duration-1000)
+        print(duration)
+        self.videoSlider.setRange(0, (duration*1000)-1000)
 
     def playVideo(self):
         try:
@@ -466,7 +452,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
                         self.playbackThread.frameSignal.connect(self.setFrame_h_w)
                         self.playbackThread.doneSignal.connect(self.threadDone)
                         self.playbackThread.errorSignal.connect(self.errorMsg)
-                        self.playLoadedVideo()
                         self.clearStats()
                         self.playbackThread.start()
                     elif self.playbackThread.isFinished():
@@ -477,11 +462,9 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
                         self.playbackThread.frameSignal.connect(self.setFrame_h_w)
                         self.playbackThread.doneSignal.connect(self.threadDone)
                         self.playbackThread.errorSignal.connect(self.errorMsg)
-                        self.playLoadedVideo()
                         self.clearStats()
                         self.playbackThread.start()
                     elif not self.playbackThread.isFinished():
-                        self.playLoadedVideo()
                         self.playbackThread.Pause = not self.playbackThread.Pause
                 else :
                     QMessageBox.critical(self, "Error", "Load a CSV file or process video to train", buttons=QMessageBox.Ok)
@@ -498,14 +481,8 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         pass
 
     def errorMsg(self, msg):
-        self.playLoadedVideo()
         self.playbackThread = None
         QMessageBox.critical(self, "Error", msg, buttons=QMessageBox.Ok)
-
-    def playLoadedVideo(self):
-        self.videoWidget.resize(400, 300)
-        if self.video.state() == QMediaPlayer.PlayingState: self.video.pause()
-        else: self.video.play()
 
     def setFrame_h_w(self, frame_w, frame_h):
         self.frame_w = frame_w
@@ -516,7 +493,7 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         self.durationLabel.setText(time.strftime("%M:%S", time.gmtime(sec)))
         pass
 
-    def showimg(self, img, qimage, stats, currentFrame, playback):
+    def showimg(self, normimg, img, qimage, stats, currentFrame, playback):
 
         self.totalDolphins = 0
         self.totalSharks = 0
@@ -547,8 +524,11 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         self.setObjLabel(self.sharksLabel, "sharks", self.totalSharks)
         self.setObjLabel(self.surfersLabel, "surfers", self.totalSurfers)
         
-        pixmap = QPixmap(qimage)
-        self.trainedVideoLabel.setPixmap(pixmap)
+        pixmap1 = QPixmap(normimg)
+        self.videoLabel.setPixmap(pixmap1)
+
+        pixmap2 = QPixmap(qimage)
+        self.trainedVideoLabel.setPixmap(pixmap2)
     
     def setObjLabel(self, label, object_type, num):
         label.setText("Total {}:  {}".format(object_type, num))
@@ -557,21 +537,19 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         if self.detecting is False:
             if self.importedVideoPath is not None and (self.importedCSVPath is not None or self.detectedStats):
                 if self.playbackThread.isRunning():
-                    self.video.pause()
                     self.playbackThread.nextFrame()
 
     def prevFrame(self):
         if self.detecting is False:
             if self.importedVideoPath is not None and (self.importedCSVPath is not None or self.detectedStats):
                 if self.playbackThread.isRunning():
-                    self.video.pause()
                     self.playbackThread.prevFrame()
 
     def stopVideo(self):
         try:
             if self.detecting is False:
-                self.video.stop()
                 if self.playbackThread is not None: self.playbackThread.stop()
+                self.videoLabel.clear()
                 self.trainedVideoLabel.clear()
                 self.removeAllItemsFromTable(self.statView)
             else:
@@ -580,11 +558,6 @@ View an end-user Guide for the Application: Ctrl+G\n    View this List of Shortc
         except Exception as e: 
             logging.error(traceback.format_exc())
             QMessageBox.critical(self, "Error", "Load a CSV file or process video to train", buttons=QMessageBox.Ok)
-
-    def resetVideo(self):
-        if self.video.state() == QMediaPlayer.StoppedState:
-            self.stopVideo()
-            self.resetSlider()
 
     def getDLM(self):
         return self.dlmOptions.currentIndex(), self.dlmOptions.currentText()
